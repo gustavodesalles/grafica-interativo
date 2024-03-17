@@ -30,7 +30,7 @@ class GraphicsSystem2D:
         self.display_file = display_file
         self.object_list = object_list
 
-        self.canvas = tk.Canvas(master, width=600, height=400, bg='white')
+        self.canvas = tk.Canvas(master, width=800, height=500, bg='white')
         self.canvas.pack(side=tk.LEFT)
 
         self.object_list_frame = tk.Frame(master)
@@ -47,7 +47,7 @@ class GraphicsSystem2D:
         self.button_remove_object.pack()
 
         self.window = [-300, -200, 300, 200]  # Coordenadas da janela
-        self.viewport = [0, 0, 600, 400]  # Coordenadas da viewport
+        self.viewport = [100, 100, 700, 400]  # Coordenadas da viewport
 
         # Adicionar rótulos para viewport e window
         self.label_viewport = tk.Label(master, text="Viewport", font=('Helvetica', 14))
@@ -55,9 +55,11 @@ class GraphicsSystem2D:
         self.label_window = tk.Label(master, text="Window", font=('Helvetica', 14))
         self.label_window.place(x=100, y=10)
 
-        # Desenhar a borda tracejada da viewport
-        #self.viewport_border = self.canvas.create_rectangle(*self.viewport, outline='red', dash=(10, 10))
-
+        # Desenhar a borda da viewport
+        self.viewport_border = self.canvas.create_rectangle(*self.viewport, outline='red', dash=(5, 5))
+        
+        # Desenhar a borda da janela
+        self.window_border = self.canvas.create_rectangle(*self.window, outline='blue')
 
     def transform_to_viewport(self, x, y):
         xmin, ymin, xmax, ymax = self.window
@@ -104,6 +106,11 @@ class GraphicsSystem2D:
 
     def draw_display_file(self):
         self.canvas.delete('all')
+        
+        # Redesenha as bordas
+        self.viewport_border = self.canvas.create_rectangle(*self.viewport, outline='red', dash=(5, 5))
+        self.window_border = self.canvas.create_rectangle(*self.window, outline='blue')
+        
         for obj_name, (obj_type, coordinates) in self.display_file.objects.items():
             self.draw_object(obj_type, coordinates)
         
