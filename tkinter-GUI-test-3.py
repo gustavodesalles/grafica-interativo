@@ -56,7 +56,8 @@ class GraphicsSystem2D:
         self.label_window.place(x=100, y=10)
 
         # Desenhar a borda tracejada da viewport
-        self.viewport_border = self.canvas.create_rectangle(*self.viewport, outline='black', dash=(3, 3))
+        #self.viewport_border = self.canvas.create_rectangle(*self.viewport, outline='red', dash=(10, 10))
+
 
     def transform_to_viewport(self, x, y):
         xmin, ymin, xmax, ymax = self.window
@@ -77,7 +78,29 @@ class GraphicsSystem2D:
             self.canvas.create_line(x1, y1, x2, y2, fill='black')
         elif obj_type == 'wireframe':
             transformed_coords = [self.transform_to_viewport(*coord) for coord in coordinates]
-            self.canvas.create_polygon(transformed_coords, outline='black')
+            self.draw_wireframe(transformed_coords)
+
+    def draw_wireframe(self, coordinates):
+        # Desenhar as linhas do polígono
+        for i in range(len(coordinates)):
+            x1, y1 = coordinates[i]
+            x2, y2 = coordinates[(i + 1) % len(coordinates)]
+            self.canvas.create_line(x1, y1, x2, y2, fill='black')
+
+        # Preencher o interior do polígono manualmente
+        scanline_y = min(y for x, y in coordinates)
+        while scanline_y <= max(y for x, y in coordinates):
+            intersections = []
+            for i in range(len(coordinates)):
+                x1, y1 = coordinates[i]
+                x2, y2 = coordinates[(i + 1) % len(coordinates)]
+                if y1 != y2 and (y1 <= scanline_y <= y2 or y2 <= scanline_y <= y1):
+                    x_intersect = x1 + (scanline_y - y1) * (x2 - x1) / (y2 - y1)
+                    intersections.append(x_intersect)
+            intersections.sort()
+            for i in range(0, len(intersections), 2):
+                self.canvas.create_line(intersections[i], scanline_y, intersections[i + 1], scanline_y, fill='black')
+            scanline_y += 1
 
     def draw_display_file(self):
         self.canvas.delete('all')
@@ -110,17 +133,17 @@ class GraphicsSystem2D:
         self.display_file.remove_object(object_name)
         self.draw_display_file()
 
-# Exemplo de uso
+# Exemplo de uso - main file
 root = tk.Tk()
 root.title("2D Graphics System")
 
 display_file = DisplayFile2D()
-display_file.add_point((0, 0))
 display_file.add_line(((-50, -50), (50, 50)))
+display_file.add_point((0, 0))
 display_file.add_wireframe([(100, -100), (100, 100), (-100, 100), (-100, -100)])
 
 object_list = tk.Listbox(root)
-object_list.pack(side=tk.RIGHT, padx=10, pady=10)
+#object_list.pack(side=tk.RIGHT,padx=10, pady=10)
 
 graphics_system = GraphicsSystem2D(root, display_file, object_list)
 graphics_system.draw_display_file()
