@@ -1,4 +1,5 @@
 import tkinter as tk
+import numpy as np
 
 class DisplayFile2D:
     def __init__(self):
@@ -23,6 +24,43 @@ class DisplayFile2D:
     def remove_object(self, name):
         if name in self.objects:
             del self.objects[name]
+
+
+class Transformation2D:
+    @staticmethod
+    def translation(tx, ty):
+        return np.array([
+            [1, 0, tx],
+            [0, 1, ty],
+            [0, 0, 1]
+        ])
+
+    @staticmethod
+    def rotation(angle):
+        theta = np.radians(angle)
+        cos_theta = np.cos(theta)
+        sin_theta = np.sin(theta)
+        return np.array([
+            [cos_theta, -sin_theta, 0],
+            [sin_theta, cos_theta, 0],
+            [0, 0, 1]
+        ])
+
+    @staticmethod
+    def scale(sx, sy):
+        return np.array([
+            [sx, 0, 0],
+            [0, sy, 0],
+            [0, 0, 1]
+        ])
+
+    @staticmethod
+    def arbitrary_rotation(theta, center):
+        cx, cy = center
+        translation_matrix = Transformation2D.translation(-cx, -cy)
+        rotation_matrix = Transformation2D.rotation(theta)
+        inv_translation_matrix = Transformation2D.translation(cx, cy)
+        return np.dot(inv_translation_matrix, np.dot(rotation_matrix, translation_matrix))
 
 class GraphicsSystem2D:
     def __init__(self, master, display_file, object_list):
@@ -61,6 +99,8 @@ class GraphicsSystem2D:
         # Desenhar a borda da janela
         self.window_border = self.canvas.create_rectangle(*self.window, outline='blue')
 
+        self.setup_transformation_interface()
+
     def transform_to_viewport(self, x, y):
         xmin, ymin, xmax, ymax = self.window
         xvmin, yvmin, xvmax, yvmax = self.viewport
@@ -69,6 +109,62 @@ class GraphicsSystem2D:
         yv = ((y - ymin) / (ymax - ymin)) * (yvmax - yvmin) + yvmin
 
         return xv, yv
+    
+    def setup_transformation_interface(self):
+        self.label_transformation = tk.Label(self.master, text="Transformation")
+        self.label_transformation.place(x=650, y=150)
+
+        self.entry_transformation = tk.Entry(self.master)
+        self.entry_transformation.place(x=650, y=180)
+
+        self.label_params = tk.Label(self.master, text="Params (comma separated)")
+        self.label_params.place(x=650, y=210)
+
+        self.entry_params = tk.Entry(self.master)
+        self.entry_params.place(x=650, y=240)
+
+        self.button_transform = tk.Button(self.master, text="Transform Object", command=self.transform_object)
+        self.button_transform.place(x=650, y=270)
+
+    def transform_object(self):
+        obj_name = self.entry_object_name.get()
+        transformation = self.entry_transformation.get()
+        transformation_params = self.entry_params.get().split(',')
+        
+        if transformation == 'translation':
+            tx, ty = map(float, transformation_params)
+            transformation_matrix = Transformation2D.translation(tx, ty)
+        elif transformation == 'rotation':
+            angle = float(transformation_params[0])
+            transformation_matrix = Transformation2D.rotation(angle)
+        elif transformation == 'scaling':
+            sx, sy = map(float, transformation_params)
+            transformation_matrix = Transformation2D.scale(sx, sy)
+        elif transformation == 'arbitrary_rotation':
+            angle = float(transformation_params[0])
+            center = tuple(map(float, transformation_params[1:]))
+            transformation_matrix = Transformation2D.arbitrary_rotation(angle, center)
+        
+        self.apply_transformation(obj_name, transformation_matrix)
+        self.draw_display_file() 
+
+    def apply_transformation(self, obj_name, transformation_matrix):
+        obj_type, coordinates = self.display_file.objects[obj_name]
+        if obj_type == 'point':
+            new_coordinates = np.dot(transformation_matrix, np.array([coordinates[0], coordinates[1], 1]))
+            self.display_file.objects[obj_name] = ('point', (new_coordinates[0], new_coordinates[1]))
+        elif obj_type == 'line':
+            new_coords = []
+            for coord in coordinates:
+                new_coord = np.dot(transformation_matrix, np.array([coord[0], coord[1], 1]))
+                new_coords.append((new_coord[0], new_coord[1]))
+            self.display_file.objects[obj_name] = ('line', (new_coords[0], new_coords[1]))
+        elif obj_type == 'wireframe':
+            new_coords = []
+            for coord in coordinates:
+                new_coord = np.dot(transformation_matrix, np.array([coord[0], coord[1], 1]))
+                new_coords.append((new_coord[0], new_coord[1]))
+            self.display_file.objects[obj_name] = ('wireframe', new_coords)
 
     def draw_object(self, obj_type, coordinates):
         if obj_type == 'point':
@@ -150,7 +246,6 @@ display_file.add_point((0, 0))
 display_file.add_wireframe([(100, -100), (100, 100), (-100, 100), (-100, -100)])
 
 object_list = tk.Listbox(root)
-#object_list.pack(side=tk.RIGHT,padx=10, pady=10)
 
 graphics_system = GraphicsSystem2D(root, display_file, object_list)
 graphics_system.draw_display_file()
