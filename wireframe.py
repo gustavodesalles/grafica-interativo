@@ -1,8 +1,11 @@
-from objeto import Objeto
+from object import Object
 
 
-class Wireframe(Objeto):
-    def __init__(self, nome):
-        super().__init__(nome, 'Wireframe')
-        self.lista_pontos = []
-        
+class Wireframe(Object):
+    def __init__(self, name):
+        super().__init__(name, 'Wireframe')
+        self.point_list = []
+
+    def __init__(self, point_list, name):
+        super().__init__(name, 'Wireframe')
+        self.point_list = point_list

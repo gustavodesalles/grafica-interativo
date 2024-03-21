@@ -102,33 +102,38 @@ class GraphicsSystem2D:
         self.draw_display_file()
 
     def apply_transformation(self, obj_name, transformation_matrix):
-        obj_type, coordinates = self.display_file.objects[obj_name]
-        if obj_type == 'point':
-            new_coordinates = np.dot(transformation_matrix, np.array([coordinates[0], coordinates[1], 1]))
-            self.display_file.objects[obj_name] = ('point', (new_coordinates[0], new_coordinates[1]))
-        elif obj_type == 'line':
-            new_coords = []
-            for coord in coordinates:
-                new_coord = np.dot(transformation_matrix, np.array([coord[0], coord[1], 1]))
-                new_coords.append((new_coord[0], new_coord[1]))
-            self.display_file.objects[obj_name] = ('line', (new_coords[0], new_coords[1]))
-        elif obj_type == 'wireframe':
-            new_coords = []
-            for coord in coordinates:
-                new_coord = np.dot(transformation_matrix, np.array([coord[0], coord[1], 1]))
-                new_coords.append((new_coord[0], new_coord[1]))
-            self.display_file.objects[obj_name] = ('wireframe', new_coords)
+        obj = self.display_file.objects[obj_name]
+        if obj.type == 'Point':
+            new_coordinates = np.dot(transformation_matrix, np.array([obj.coordinate_x, obj.coordinate_y, 1]))
+            obj.coordinate_x = new_coordinates[0]
+            obj.coordinate_y = new_coordinates[1]
+            # self.display_file.objects[obj_name] = ('point', (new_coordinates[0], new_coordinates[1]))
+        elif obj.type == 'Line':
+        #     new_coords = []
+        #     for coord in coordinates:
+        #         new_coord = np.dot(transformation_matrix, np.array([coord[0], coord[1], 1]))
+            obj.start_point = np.dot(transformation_matrix, np.array([obj.start_point[0], obj.start_point[1], 1]))
+            obj.end_point = np.dot(transformation_matrix, np.array([obj.end_point[0], obj.end_point[1], 1]))
+        #         new_coords.append((new_coord[0], new_coord[1]))
+        #     self.display_file.objects[obj_name] = ('line', (new_coords[0], new_coords[1]))
+        elif obj.type == 'Wireframe':
+        #     new_coords = []
+            for i in range(len(obj.point_list)):
+                point = obj.point_list[i]
+                obj.point_list[i] = np.dot(transformation_matrix, np.array([point[0], point[1], 1]))
+        #         new_coords.append((new_coord[0], new_coord[1]))
+        #     self.display_file.objects[obj_name] = ('wireframe', new_coords)
 
-    def draw_object(self, obj_type, coordinates):
-        if obj_type == 'point':
-            x, y = self.transform_to_viewport(*coordinates)
+    def draw_object(self, obj):
+        if obj.type == 'Point':
+            x, y = self.transform_to_viewport(obj.coordinate_x, obj.coordinate_y)
             self.canvas.create_oval(x, y, x+2, y+2, fill='black')
-        elif obj_type == 'line':
-            x1, y1 = self.transform_to_viewport(*coordinates[0])
-            x2, y2 = self.transform_to_viewport(*coordinates[1])
+        elif obj.type == 'Line':
+            x1, y1 = self.transform_to_viewport(obj.start_point[0], obj.start_point[1])
+            x2, y2 = self.transform_to_viewport(obj.end_point[0], obj.end_point[1])
             self.canvas.create_line(x1, y1, x2, y2, fill='black')
-        elif obj_type == 'wireframe':
-            transformed_coords = [self.transform_to_viewport(*coord) for coord in coordinates]
+        elif obj.type == 'Wireframe':
+            transformed_coords = [self.transform_to_viewport(point[0], point[1]) for point in obj.point_list]
             self.draw_wireframe(transformed_coords)
 
     def draw_wireframe(self, coordinates):
@@ -160,8 +165,10 @@ class GraphicsSystem2D:
         self.viewport_border = self.canvas.create_rectangle(*self.viewport, outline='red', dash=(5, 5))
         self.window_border = self.canvas.create_rectangle(*self.window, outline='blue')
 
-        for obj_name, (obj_type, coordinates) in self.display_file.objects.items():
-            self.draw_object(obj_type, coordinates)
+        # for obj_name, (obj_type, coordinates) in self.display_file.objects.items():
+        #     self.draw_object(obj_type, coordinates)
+        for obj in self.display_file.objects.values():
+            self.draw_object(obj)
 
         # Atualizar a lista de objetos
         object_names = "\n".join(self.display_file.objects.keys())

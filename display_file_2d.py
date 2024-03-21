@@ -1,3 +1,8 @@
+from line import Line
+from point import Point
+from wireframe import Wireframe
+
+
 class DisplayFile2D:
     def __init__(self):
         self.objects = {}  # Dicionário para armazenar objetos
@@ -5,17 +10,20 @@ class DisplayFile2D:
 
     def add_point(self, coordinates):
         name = f'Ponto{self.counters["point"] + 1}'
-        self.objects[name] = ('point', coordinates)
+        point = Point(coordinates[0], coordinates[1], name)
+        self.objects[name] = point
         self.counters['point'] += 1
 
     def add_line(self, coordinates):
         name = f'Reta{self.counters["line"] + 1}'
-        self.objects[name] = ('line', coordinates)
+        line = Line(coordinates[0], coordinates[1], name)
+        self.objects[name] = line
         self.counters['line'] += 1
 
     def add_wireframe(self, coordinates):
         name = f'Wireframe{self.counters["wireframe"] + 1}'
-        self.objects[name] = ('wireframe', coordinates)
+        wireframe = Wireframe(coordinates, name)
+        self.objects[name] = wireframe
         self.counters['wireframe'] += 1
 
     def remove_object(self, name):
