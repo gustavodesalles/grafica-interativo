@@ -89,6 +89,7 @@ class GraphicsSystem2D:
 
         self.setup_object_list_interface()
         self.setup_remove_object_interface()
+        self.setup_add_object_interface()
         self.setup_transformation_interface()
         self.setup_pan_interface()
         self.setup_zoom_interface()
@@ -117,6 +118,16 @@ class GraphicsSystem2D:
         self.entry_object_name.pack()
         self.button_remove_object = tk.Button(self.object_list_frame, text="Remove Object", command=self.remove_object)
         self.button_remove_object.pack()
+    
+    def setup_add_object_interface(self):
+        self.label_coordinates = tk.Label(root, text="Coordinates:")
+        self.label_coordinates.pack(side=tk.TOP)
+
+        self.entry_coordinates = tk.Entry(root)
+        self.entry_coordinates.pack(side=tk.TOP)
+
+        self.button_add_object = tk.Button(root, text="Add Object", command=self.add_object)
+        self.button_add_object.pack(side=tk.TOP)
 
     def setup_transformation_interface(self):
         self.label_transformation = tk.Label(self.master, text="Transformation")
@@ -266,11 +277,6 @@ class GraphicsSystem2D:
 
         self.draw_display_file()
 
-    def remove_object(self):
-        object_name = self.entry_object_name.get()
-        self.display_file.remove_object(object_name)
-        self.draw_display_file()
-
     def pan_left(self):
         self.pan(-20, 0)
         self.draw_display_file()
@@ -287,6 +293,17 @@ class GraphicsSystem2D:
         self.zoom(1.2)
         self.draw_display_file()
 
+    def remove_object(self):
+        object_name = self.entry_object_name.get()
+        self.display_file.remove_object(object_name)
+        self.draw_display_file()
+
+    def add_object(self):
+        coordinates_str = self.entry_coordinates.get()
+        coordinates = eval(coordinates_str)
+        display_file.add_wireframe(coordinates)
+        graphics_system.draw_display_file()
+    
 # Exemplo de uso - main file
 root = tk.Tk()
 root.title("2D Graphics System")
@@ -300,20 +317,5 @@ object_list = tk.Listbox(root)
 
 graphics_system = GraphicsSystem2D(root, display_file, object_list)
 graphics_system.draw_display_file()
-
-def add_object():
-    coordinates_str = entry_coordinates.get()
-    coordinates = eval(coordinates_str)
-    display_file.add_wireframe(coordinates)
-    graphics_system.draw_display_file()
-
-label_coordinates = tk.Label(root, text="Coordinates:")
-label_coordinates.pack(side=tk.TOP)
-
-entry_coordinates = tk.Entry(root)
-entry_coordinates.pack(side=tk.TOP)
-
-button_add_object = tk.Button(root, text="Add Object", command=add_object)
-button_add_object.pack(side=tk.TOP)
 
 root.mainloop()
