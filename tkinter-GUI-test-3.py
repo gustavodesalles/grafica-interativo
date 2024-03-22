@@ -68,21 +68,9 @@ class GraphicsSystem2D:
         self.display_file = display_file
         self.object_list = object_list
 
+        # Canvas
         self.canvas = tk.Canvas(master, width=800, height=500, bg='white')
         self.canvas.pack(side=tk.LEFT)
-
-        self.object_list_frame = tk.Frame(master)
-        self.object_list_frame.pack(side=tk.RIGHT)
-        self.object_list_title = tk.Label(self.object_list_frame, text="Object List")
-        self.object_list_title.pack()
-        self.object_list_label = tk.Label(self.object_list_frame, text="")
-        self.object_list_label.pack()
-        self.object_name_label = tk.Label(self.object_list_frame, text="Object Name:")
-        self.object_name_label.pack()
-        self.entry_object_name = tk.Entry(self.object_list_frame)
-        self.entry_object_name.pack()
-        self.button_remove_object = tk.Button(self.object_list_frame, text="Remove Object", command=self.remove_object)
-        self.button_remove_object.pack()
 
         self.window = [-300, -200, 300, 200]  # Coordenadas da janela
         self.viewport = [100, 100, 700, 400]  # Coordenadas da viewport
@@ -99,7 +87,11 @@ class GraphicsSystem2D:
         # Desenhar a borda da janela
         self.window_border = self.canvas.create_rectangle(*self.window, outline='blue')
 
+        self.setup_object_list_interface()
+        self.setup_remove_object_interface()
         self.setup_transformation_interface()
+        self.setup_pan_interface()
+        self.setup_zoom_interface()
 
     def transform_to_viewport(self, x, y):
         xmin, ymin, xmax, ymax = self.window
@@ -110,21 +102,64 @@ class GraphicsSystem2D:
 
         return xv, yv
     
+    def setup_object_list_interface(self):
+        self.object_list_frame = tk.Frame(self.master)
+        self.object_list_frame.pack(side=tk.RIGHT)
+        self.object_list_title = tk.Label(self.object_list_frame, text="Object List")
+        self.object_list_title.pack()
+        self.object_list_label = tk.Label(self.object_list_frame, text="")
+        self.object_list_label.pack()
+
+    def setup_remove_object_interface(self):
+        self.object_name_label = tk.Label(self.object_list_frame, text="Object Name:")
+        self.object_name_label.pack()
+        self.entry_object_name = tk.Entry(self.object_list_frame)
+        self.entry_object_name.pack()
+        self.button_remove_object = tk.Button(self.object_list_frame, text="Remove Object", command=self.remove_object)
+        self.button_remove_object.pack()
+
     def setup_transformation_interface(self):
         self.label_transformation = tk.Label(self.master, text="Transformation")
-        self.label_transformation.place(x=650, y=150)
+        #self.label_transformation.place(x=650, y=150)
+        self.label_transformation.pack()
 
         self.entry_transformation = tk.Entry(self.master)
-        self.entry_transformation.place(x=650, y=180)
+        #self.entry_transformation.place(x=650, y=180)
+        self.entry_transformation.pack()
+
+        self.label_object_name = tk.Label(self.master, text="Object Name:")
+        #self.label_object_name.place(x=650, y=300)
+        self.label_object_name.pack()
+
+        self.entry_object_name_transform = tk.Entry(self.master)
+        #self.entry_object_name_transform.place(x=650, y=330)
+        self.entry_object_name_transform.pack()
 
         self.label_params = tk.Label(self.master, text="Params (comma separated)")
-        self.label_params.place(x=650, y=210)
+        #self.label_params.place(x=650, y=210)
+        self.label_params.pack()
 
         self.entry_params = tk.Entry(self.master)
-        self.entry_params.place(x=650, y=240)
+        #self.entry_params.place(x=650, y=240)
+        self.entry_params.pack()
 
         self.button_transform = tk.Button(self.master, text="Transform Object", command=self.transform_object)
-        self.button_transform.place(x=650, y=270)
+        #self.button_transform.place(x=650, y=270)
+        self.button_transform.pack()
+
+    def setup_pan_interface(self):
+        button_pan_left = tk.Button(root, text="Pan Left", command=self.pan_left)
+        button_pan_left.pack(side=tk.TOP)
+
+        button_pan_right = tk.Button(root, text="Pan Right", command=self.pan_right)
+        button_pan_right.pack(side=tk.TOP)
+
+    def setup_zoom_interface(self):
+        button_zoom_in = tk.Button(root, text="Zoom In", command=self.zoom_in)
+        button_zoom_in.pack(side=tk.TOP)
+
+        button_zoom_out = tk.Button(root, text="Zoom Out", command=self.zoom_out)
+        button_zoom_out.pack(side=tk.TOP)
 
     def transform_object(self):
         obj_name = self.entry_object_name.get()
@@ -236,6 +271,22 @@ class GraphicsSystem2D:
         self.display_file.remove_object(object_name)
         self.draw_display_file()
 
+    def pan_left(self):
+        self.pan(-20, 0)
+        self.draw_display_file()
+
+    def pan_right(self):
+        self.pan(20, 0)
+        self.draw_display_file()
+
+    def zoom_in(self):
+        self.zoom(0.8)
+        self.draw_display_file()
+
+    def zoom_out(self):
+        self.zoom(1.2)
+        self.draw_display_file()
+
 # Exemplo de uso - main file
 root = tk.Tk()
 root.title("2D Graphics System")
@@ -250,39 +301,11 @@ object_list = tk.Listbox(root)
 graphics_system = GraphicsSystem2D(root, display_file, object_list)
 graphics_system.draw_display_file()
 
-def pan_left():
-    graphics_system.pan(-20, 0)
-    graphics_system.draw_display_file()
-
-def pan_right():
-    graphics_system.pan(20, 0)
-    graphics_system.draw_display_file()
-
-def zoom_in():
-    graphics_system.zoom(0.8)
-    graphics_system.draw_display_file()
-
-def zoom_out():
-    graphics_system.zoom(1.2)
-    graphics_system.draw_display_file()
-
 def add_object():
     coordinates_str = entry_coordinates.get()
     coordinates = eval(coordinates_str)
     display_file.add_wireframe(coordinates)
     graphics_system.draw_display_file()
-
-button_pan_left = tk.Button(root, text="Pan Left", command=pan_left)
-button_pan_left.pack(side=tk.TOP)
-
-button_pan_right = tk.Button(root, text="Pan Right", command=pan_right)
-button_pan_right.pack(side=tk.TOP)
-
-button_zoom_in = tk.Button(root, text="Zoom In", command=zoom_in)
-button_zoom_in.pack(side=tk.TOP)
-
-button_zoom_out = tk.Button(root, text="Zoom Out", command=zoom_out)
-button_zoom_out.pack(side=tk.TOP)
 
 label_coordinates = tk.Label(root, text="Coordinates:")
 label_coordinates.pack(side=tk.TOP)
