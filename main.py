@@ -1,27 +1,20 @@
-import sys
-from PyQt6.QtWidgets import QApplication, QWidget, QListWidget, QVBoxLayout, QPushButton
+import tkinter as tk
 
-app = QApplication(sys.argv)
-window = QWidget()
-window.setWindowTitle('Teste')
-window.setFixedWidth(1000)
-window.setFixedHeight(800)
+from display_file_2d import DisplayFile2D
+from graphics_system_2d import GraphicsSystem2D
 
-lista_objetos = QListWidget()
-lista_objetos.insertItem(0, 'Alice')
-lista_objetos.insertItem(1, 'Bob')
+# Exemplo de uso - main file
+root = tk.Tk()
+root.title("2D Graphics System")
 
-button_widget = QWidget(parent=window)
+display_file = DisplayFile2D()
+display_file.add_line(((-50, -50), (50, 50)))
+display_file.add_point((0, 0))
+# display_file.add_wireframe([(100, -100), (100, 100), (-100, 100), (-100, -100)])
 
-layout = QVBoxLayout()
+object_list = tk.Listbox(root)
 
-QPushButton('Up')
-layout.addWidget(lista_objetos, 200)
-layout.addWidget(QPushButton('Up'))
-layout.addWidget(QPushButton('Down'))
-button_widget.setLayout(layout)
-button_widget.setFixedWidth(70)
-button_widget.setFixedHeight(80)
+graphics_system = GraphicsSystem2D(root, display_file, object_list)
+graphics_system.draw_display_file()
 
-window.show()
-sys.exit(app.exec())
+root.mainloop()

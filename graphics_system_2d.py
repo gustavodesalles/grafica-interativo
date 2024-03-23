@@ -14,40 +14,26 @@ class GraphicsSystem2D:
         self.canvas = tk.Canvas(master, width=800, height=500, bg='white')
         self.canvas.pack(side=tk.LEFT)
 
-        self.object_list_frame = tk.Frame(master)
-        self.object_list_frame.pack(side=tk.RIGHT)
-        self.object_list_title = tk.Label(self.object_list_frame, text="Object List")
-        self.object_list_title.pack()
-        self.object_list_label = tk.Label(self.object_list_frame, text="")
-        self.object_list_label.pack()
-        self.object_name_label = tk.Label(self.object_list_frame, text="Object Name:")
-        self.object_name_label.pack()
-        self.entry_object_name = tk.Entry(self.object_list_frame)
-        self.entry_object_name.pack()
-        self.button_remove_object = tk.Button(self.object_list_frame, text="Remove Object", command=self.remove_object)
-        self.button_remove_object.pack()
-
-        self.label_object_name = tk.Label(self.master, text="Object Name:")
-        self.label_object_name.place(x=900, y=300)
-
-        self.entry_object_name_transform = tk.Entry(self.master)
-        self.entry_object_name_transform.place(x=900, y=330)
-
         self.window = [-300, -200, 300, 200]  # Coordenadas da janela
         self.viewport = [100, 100, 700, 400]  # Coordenadas da viewport
 
         # Adicionar rótulos para viewport e window
-        self.label_viewport = tk.Label(master, text="Viewport", font=('Helvetica', 14))
-        self.label_viewport.place(x=650, y=10)
-        self.label_window = tk.Label(master, text="Window", font=('Helvetica', 14))
-        self.label_window.place(x=100, y=10)
+        # self.label_viewport = tk.Label(master, text="Viewport", font=('Helvetica', 14))
+        # self.label_viewport.place(x=650, y=10)
+        # self.label_window = tk.Label(master, text="Window", font=('Helvetica', 14))
+        # self.label_window.place(x=100, y=10)
 
         # Desenhar a borda da viewport
-        self.viewport_border = self.canvas.create_rectangle(*self.viewport, outline='red', dash=(5, 5))
+        # self.viewport_border = self.canvas.create_rectangle(*self.viewport, outline='red', dash=(5, 5))
 
         # Desenhar a borda da janela
-        self.window_border = self.canvas.create_rectangle(*self.window, outline='blue')
+        # self.window_border = self.canvas.create_rectangle(*self.window, outline='blue')
 
+        self.setup_object_list_interface()
+        self.setup_pan_interface()
+        self.setup_zoom_interface()
+        self.setup_add_object_interface()
+        self.setup_remove_object_interface()
         self.setup_transformation_interface()
 
     def transform_to_viewport(self, x, y):
@@ -59,21 +45,83 @@ class GraphicsSystem2D:
 
         return xv, yv
 
+    def setup_object_list_interface(self):
+        self.object_list_frame = tk.Frame(self.master)
+        self.object_list_frame.pack(side=tk.RIGHT)
+        self.object_list_title = tk.Label(self.object_list_frame, text="Object List")
+        self.object_list_title.pack()
+        self.object_list_label = tk.Label(self.object_list_frame, text="")
+        self.object_list_label.pack()
+
+    def setup_remove_object_interface(self):
+        self.object_name_label = tk.Label(self.object_list_frame, text="Object Name:")
+        self.object_name_label.pack()
+        self.entry_object_name = tk.Entry(self.object_list_frame)
+        self.entry_object_name.pack()
+        self.button_remove_object = tk.Button(self.object_list_frame, text="Remove Object", command=self.remove_object)
+        self.button_remove_object.pack()
+
+    def setup_object_list_interface(self):
+        self.object_list_frame = tk.Frame(self.master)
+        self.object_list_frame.pack(side=tk.RIGHT)
+        self.object_list_title = tk.Label(self.object_list_frame, text="Object List")
+        self.object_list_title.pack()
+        self.object_list_label = tk.Label(self.object_list_frame, text="")
+        self.object_list_label.pack()
+
+    def setup_remove_object_interface(self):
+        self.object_name_label = tk.Label(self.object_list_frame, text="Object Name:")
+        self.object_name_label.pack()
+        self.entry_object_name = tk.Entry(self.object_list_frame)
+        self.entry_object_name.pack()
+        self.button_remove_object = tk.Button(self.object_list_frame, text="Remove Object", command=self.remove_object)
+        self.button_remove_object.pack()
+
+    def setup_add_object_interface(self):
+        self.label_coordinates = tk.Label(self.master, text="Coordinates:")
+        self.label_coordinates.pack(side=tk.TOP)
+
+        self.entry_coordinates = tk.Entry(self.master)
+        self.entry_coordinates.pack(side=tk.TOP)
+
+        self.button_add_object = tk.Button(self.master, text="Add Object", command=self.add_object)
+        self.button_add_object.pack(side=tk.TOP)
+        
+    def setup_pan_interface(self):
+        button_pan_left = tk.Button(self.master, text="Pan Left", command=self.pan_left)
+        button_pan_left.pack(side=tk.TOP)
+
+        button_pan_right = tk.Button(self.master, text="Pan Right", command=self.pan_right)
+        button_pan_right.pack(side=tk.TOP)
+
+    def setup_zoom_interface(self):
+        button_zoom_in = tk.Button(self.master, text="Zoom In", command=self.zoom_in)
+        button_zoom_in.pack(side=tk.TOP)
+
+        button_zoom_out = tk.Button(self.master, text="Zoom Out", command=self.zoom_out)
+        button_zoom_out.pack(side=tk.TOP)
+
     def setup_transformation_interface(self):
         self.label_transformation = tk.Label(self.master, text="Transformation")
-        self.label_transformation.place(x=1050, y=200)
+        self.label_transformation.pack()
 
         self.entry_transformation = tk.Entry(self.master)
-        self.entry_transformation.place(x=1050, y=230)
+        self.entry_transformation.pack()
+
+        self.label_object_name = tk.Label(self.master, text="Object Name:")
+        self.label_object_name.pack()
+
+        self.entry_object_name_transform = tk.Entry(self.master)
+        self.entry_object_name_transform.pack()
 
         self.label_params = tk.Label(self.master, text="Params (comma separated)")
-        self.label_params.place(x=1050, y=260)
+        self.label_params.pack()
 
         self.entry_params = tk.Entry(self.master)
-        self.entry_params.place(x=1050, y=290)
+        self.entry_params.pack()
 
         self.button_transform = tk.Button(self.master, text="Transform Object", command=self.transform_object)
-        self.button_transform.place(x=1050, y=320)
+        self.button_transform.pack()
 
     def transform_object(self):
         obj_name = self.entry_object_name_transform.get()
@@ -107,22 +155,13 @@ class GraphicsSystem2D:
             new_coordinates = np.dot(transformation_matrix, np.array([obj.coordinate_x, obj.coordinate_y, 1]))
             obj.coordinate_x = new_coordinates[0]
             obj.coordinate_y = new_coordinates[1]
-            # self.display_file.objects[obj_name] = ('point', (new_coordinates[0], new_coordinates[1]))
         elif obj.type == 'Line':
-        #     new_coords = []
-        #     for coord in coordinates:
-        #         new_coord = np.dot(transformation_matrix, np.array([coord[0], coord[1], 1]))
             obj.start_point = np.dot(transformation_matrix, np.array([obj.start_point[0], obj.start_point[1], 1]))
             obj.end_point = np.dot(transformation_matrix, np.array([obj.end_point[0], obj.end_point[1], 1]))
-        #         new_coords.append((new_coord[0], new_coord[1]))
-        #     self.display_file.objects[obj_name] = ('line', (new_coords[0], new_coords[1]))
         elif obj.type == 'Wireframe':
-        #     new_coords = []
             for i in range(len(obj.point_list)):
                 point = obj.point_list[i]
                 obj.point_list[i] = np.dot(transformation_matrix, np.array([point[0], point[1], 1]))
-        #         new_coords.append((new_coord[0], new_coord[1]))
-        #     self.display_file.objects[obj_name] = ('wireframe', new_coords)
 
     def draw_object(self, obj):
         if obj.type == 'Point':
@@ -162,11 +201,9 @@ class GraphicsSystem2D:
         self.canvas.delete('all')
 
         # Redesenha as bordas
-        self.viewport_border = self.canvas.create_rectangle(*self.viewport, outline='red', dash=(5, 5))
-        self.window_border = self.canvas.create_rectangle(*self.window, outline='blue')
+        # self.viewport_border = self.canvas.create_rectangle(*self.viewport, outline='red', dash=(5, 5))
+        # self.window_border = self.canvas.create_rectangle(*self.window, outline='blue')
 
-        # for obj_name, (obj_type, coordinates) in self.display_file.objects.items():
-        #     self.draw_object(obj_type, coordinates)
         for obj in self.display_file.objects.values():
             self.draw_object(obj)
 
@@ -180,6 +217,14 @@ class GraphicsSystem2D:
         self.window[2] += dx
         self.window[3] += dy
 
+    def pan_left(self):
+        self.pan(-20, 0)
+        self.draw_display_file()
+
+    def pan_right(self):
+        self.pan(20, 0)
+        self.draw_display_file()
+
     def zoom(self, factor):
         cx = (self.window[0] + self.window[2]) / 2
         cy = (self.window[1] + self.window[3]) / 2
@@ -189,6 +234,31 @@ class GraphicsSystem2D:
         self.window[2] = cx + (self.window[2] - cx) * factor
         self.window[3] = cy + (self.window[3] - cy) * factor
 
+        self.draw_display_file()
+
+    def zoom_in(self):
+        self.zoom(0.8)
+        self.draw_display_file()
+
+    def zoom_out(self):
+        self.zoom(1.2)
+        self.draw_display_file()
+
+    def add_object(self):
+        coordinates_str = self.entry_coordinates.get()
+        coordinates = coordinates_str.split(",")
+        coordinates_head = coordinates.pop(0)
+        coordinates = list(map(lambda x: int(x), coordinates))
+        coordinates = [(coordinates[i], coordinates[i+1]) for i in range(0, len(coordinates), 2)]
+
+        if coordinates_head.upper() == "POINT":
+            self.display_file.add_point(coordinates[0])
+        elif coordinates_head.upper() == "LINE":
+            self.display_file.add_line(coordinates)
+        elif coordinates_head.upper() == "WIREFRAME":
+            self.display_file.add_wireframe(coordinates)
+        else:
+            print("Unable to add object")
         self.draw_display_file()
 
     def remove_object(self):
