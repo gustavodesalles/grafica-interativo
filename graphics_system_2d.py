@@ -3,6 +3,7 @@ import tkinter as tk
 import numpy as np
 
 from transformation_2d import Transformation2D
+from window import Window
 
 
 class GraphicsSystem2D:
@@ -14,7 +15,8 @@ class GraphicsSystem2D:
         self.canvas = tk.Canvas(master, width=800, height=500, bg='white')
         self.canvas.pack(side=tk.LEFT)
 
-        self.window = [-300, -200, 300, 200]  # Coordenadas da janela
+        # self.window = [-300, -200, 300, 200]  # Coordenadas da janela
+        self.window = Window(-300, -200, 300, 200)
         self.viewport = [100, 100, 700, 400]  # Coordenadas da viewport
 
         # Adicionar rótulos para viewport e window
@@ -37,7 +39,7 @@ class GraphicsSystem2D:
         self.setup_transformation_interface()
 
     def transform_to_viewport(self, x, y):
-        xmin, ymin, xmax, ymax = self.window
+        xmin, ymin, xmax, ymax = self.window.xmin, self.window.ymin, self.window.xmax, self.window.ymax
         xvmin, yvmin, xvmax, yvmax = self.viewport
 
         xv = ((x - xmin) / (xmax - xmin)) * (xvmax - xvmin) + xvmin
@@ -212,10 +214,14 @@ class GraphicsSystem2D:
         self.object_list_label.config(text=object_names)
 
     def pan(self, dx, dy):
-        self.window[0] += dx
-        self.window[1] += dy
-        self.window[2] += dx
-        self.window[3] += dy
+        # self.window[0] += dx
+        # self.window[1] += dy
+        # self.window[2] += dx
+        # self.window[3] += dy
+        self.window.xmin += dx
+        self.window.ymin += dy
+        self.window.xmax += dx
+        self.window.ymax += dy
 
     def pan_left(self):
         self.pan(-20, 0)
@@ -226,13 +232,13 @@ class GraphicsSystem2D:
         self.draw_display_file()
 
     def zoom(self, factor):
-        cx = (self.window[0] + self.window[2]) / 2
-        cy = (self.window[1] + self.window[3]) / 2
+        cx = (self.window.xmin + self.window.xmax) / 2
+        cy = (self.window.ymin + self.window.ymax) / 2
 
-        self.window[0] = cx - (cx - self.window[0]) * factor
-        self.window[1] = cy - (cy - self.window[1]) * factor
-        self.window[2] = cx + (self.window[2] - cx) * factor
-        self.window[3] = cy + (self.window[3] - cy) * factor
+        self.window.xmin = cx - (cx - self.window.xmin) * factor
+        self.window.ymin = cy - (cy - self.window.ymin) * factor
+        self.window.xmax = cx + (self.window.xmax - cx) * factor
+        self.window.ymax = cy + (self.window.ymax - cy) * factor
 
         self.draw_display_file()
 
