@@ -93,13 +93,34 @@ class GraphicsSystem2D:
         self.setup_transformation_interface()
         self.setup_pan_interface()
         self.setup_zoom_interface()
+        self.setup_rotation_interface()
+
+        self.angle_vup = 0  # Inicializa o ângulo de rotação de Vup como 0
 
     def transform_to_viewport(self, x, y):
+        # xmin, ymin, xmax, ymax = self.window
+        # xvmin, yvmin, xvmax, yvmax = self.viewport
+
+        # xv = ((x - xmin) / (xmax - xmin)) * (xvmax - xvmin) + xvmin
+        # yv = ((y - ymin) / (ymax - ymin)) * (yvmax - yvmin) + yvmin
+
+        # return xv, yv
+    
+        # Obter os ângulos de rotação
+        theta = np.radians(self.angle_vup)
+        cos_theta = np.cos(theta)
+        sin_theta = np.sin(theta)
+
+        # Aplicar rotação para alinhar vup com o eixo Y
+        x_rotated = x * cos_theta - y * sin_theta
+        y_rotated = x * sin_theta + y * cos_theta
+
+        # Normalizar coordenadas
         xmin, ymin, xmax, ymax = self.window
         xvmin, yvmin, xvmax, yvmax = self.viewport
 
-        xv = ((x - xmin) / (xmax - xmin)) * (xvmax - xvmin) + xvmin
-        yv = ((y - ymin) / (ymax - ymin)) * (yvmax - yvmin) + yvmin
+        xv = ((x_rotated - xmin) / (xmax - xmin)) * (xvmax - xvmin) + xvmin
+        yv = ((y_rotated - ymin) / (ymax - ymin)) * (yvmax - yvmin) + yvmin
 
         return xv, yv
     
@@ -131,31 +152,24 @@ class GraphicsSystem2D:
 
     def setup_transformation_interface(self):
         self.label_transformation = tk.Label(self.master, text="Transformation")
-        #self.label_transformation.place(x=650, y=150)
         self.label_transformation.pack()
 
         self.entry_transformation = tk.Entry(self.master)
-        #self.entry_transformation.place(x=650, y=180)
         self.entry_transformation.pack()
 
         self.label_object_name = tk.Label(self.master, text="Object Name:")
-        #self.label_object_name.place(x=650, y=300)
         self.label_object_name.pack()
 
         self.entry_object_name_transform = tk.Entry(self.master)
-        #self.entry_object_name_transform.place(x=650, y=330)
         self.entry_object_name_transform.pack()
 
         self.label_params = tk.Label(self.master, text="Params (comma separated)")
-        #self.label_params.place(x=650, y=210)
         self.label_params.pack()
 
         self.entry_params = tk.Entry(self.master)
-        #self.entry_params.place(x=650, y=240)
         self.entry_params.pack()
 
         self.button_transform = tk.Button(self.master, text="Transform Object", command=self.transform_object)
-        #self.button_transform.place(x=650, y=270)
         self.button_transform.pack()
 
     def setup_pan_interface(self):
@@ -171,6 +185,14 @@ class GraphicsSystem2D:
 
         button_zoom_out = tk.Button(root, text="Zoom Out", command=self.zoom_out)
         button_zoom_out.pack(side=tk.TOP)
+
+    def setup_rotation_interface(self):
+        self.label_rotation = tk.Label(self.master, text="Rotation Angle (Vup):")
+        self.label_rotation.pack()
+        self.entry_rotation = tk.Entry(self.master)
+        self.entry_rotation.pack()
+        self.button_rotate_object = tk.Button(self.object_list_frame, text="Rotate Object", command=self.rotate_vup)
+        self.button_rotate_object.pack()
 
     def transform_object(self):
         obj_name = self.entry_object_name.get()
@@ -248,6 +270,11 @@ class GraphicsSystem2D:
 
     def draw_display_file(self):
         self.canvas.delete('all')
+
+        try:
+            self.angle_vup = float(self.entry_rotation.get())
+        except ValueError:
+            self.angle_vup = 0  # Definir como 0 se a entrada não for válida
         
         # Redesenha as bordas
         self.viewport_border = self.canvas.create_rectangle(*self.viewport, outline='red', dash=(5, 5))
@@ -303,7 +330,12 @@ class GraphicsSystem2D:
         coordinates = eval(coordinates_str)
         display_file.add_wireframe(coordinates)
         graphics_system.draw_display_file()
-    
+
+    def rotate_vup(self):
+        angle = float(self.entry_rotation.get())
+        self.angle_vup = angle
+        self.draw_display_file()
+
 # Exemplo de uso - main file
 root = tk.Tk()
 root.title("2D Graphics System")
