@@ -10,7 +10,7 @@ root.title("2D Graphics System")
 display_file = DisplayFile2D()
 display_file.add_line(((-50, -50), (50, 50)))
 display_file.add_point((0, 0))
-# display_file.add_wireframe([(100, -100), (100, 100), (-100, 100), (-100, -100)])
+display_file.add_wireframe([(100, -100), (100, 100), (-100, 100), (-100, -100)])
 
 object_list = tk.Listbox(root)
 

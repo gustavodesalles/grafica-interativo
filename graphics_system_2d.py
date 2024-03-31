@@ -37,15 +37,28 @@ class GraphicsSystem2D:
         self.setup_add_object_interface()
         self.setup_remove_object_interface()
         self.setup_transformation_interface()
+        self.setup_rotation_interface()
+
+        self.angle_vup = 0  # Inicializa o ângulo de rotação de Vup como 0
 
     def transform_to_viewport(self, x, y):
+        # Obter os ângulos de rotação
+        theta = np.radians(self.angle_vup)
+        cos_theta = np.cos(theta)
+        sin_theta = np.sin(theta)
+
+        # Aplicar rotação para alinhar vup com o eixo Y
+        x_rotated = x * cos_theta - y * sin_theta
+        y_rotated = x * sin_theta + y * cos_theta
+
+        # Normalizar coordenadas
         xmin, ymin, xmax, ymax = self.window.xmin, self.window.ymin, self.window.xmax, self.window.ymax
         xvmin, yvmin, xvmax, yvmax = self.viewport
 
-        xv = ((x - xmin) / (xmax - xmin)) * (xvmax - xvmin) + xvmin
-        yv = (1 - (y - ymin) / (ymax - ymin)) * (yvmax - yvmin) + yvmin
+        xv = ((x_rotated - xmin) / (xmax - xmin)) * (xvmax - xvmin) + xvmin
+        yv = (1 - (y_rotated - ymin) / (ymax - ymin)) * (yvmax - yvmin) + yvmin
 
-        return xv, yv
+        return xv, yv, x_rotated, y_rotated
 
     def setup_object_list_interface(self):
         self.object_list_frame = tk.Frame(self.master)
@@ -125,6 +138,14 @@ class GraphicsSystem2D:
         self.button_transform = tk.Button(self.master, text="Transform Object", command=self.transform_object)
         self.button_transform.pack()
 
+    def setup_rotation_interface(self):
+        self.label_rotation = tk.Label(self.master, text="Rotation Angle (Vup):")
+        self.label_rotation.pack()
+        self.entry_rotation = tk.Entry(self.master)
+        self.entry_rotation.pack()
+        self.button_rotate_object = tk.Button(self.object_list_frame, text="Rotate Object", command=self.rotate_vup)
+        self.button_rotate_object.pack()
+
     def transform_object(self):
         obj_name = self.entry_object_name_transform.get()
         if obj_name not in self.display_file.objects:
@@ -167,14 +188,18 @@ class GraphicsSystem2D:
 
     def draw_object(self, obj):
         if obj.type == 'Point':
-            x, y = self.transform_to_viewport(obj.coordinate_x, obj.coordinate_y)
+            x, y, obj.coordinate_x_scn, obj.coordinate_y_scn = self.transform_to_viewport(obj.coordinate_x, obj.coordinate_y)
             self.canvas.create_oval(x, y, x+2, y+2, fill='black')
         elif obj.type == 'Line':
-            x1, y1 = self.transform_to_viewport(obj.start_point[0], obj.start_point[1])
-            x2, y2 = self.transform_to_viewport(obj.end_point[0], obj.end_point[1])
+            x1, y1, obj.start_point_scn[0], obj.start_point_scn[1] = self.transform_to_viewport(obj.start_point[0], obj.start_point[1])
+            x2, y2, obj.end_point_scn[0], obj.end_point_scn[1] = self.transform_to_viewport(obj.end_point[0], obj.end_point[1])
             self.canvas.create_line(x1, y1, x2, y2, fill='black')
         elif obj.type == 'Wireframe':
-            transformed_coords = [self.transform_to_viewport(point[0], point[1]) for point in obj.point_list]
+            transformed_coords = []
+            for i in range(len(obj.point_list)):
+                point = obj.point_list[i]
+                x, y, obj.point_list_scn[i][0], obj.point_list_scn[i][1] = self.transform_to_viewport(point[0], point[1])
+                transformed_coords.append((x, y))
             self.draw_wireframe(transformed_coords)
 
     def draw_wireframe(self, coordinates):
@@ -191,7 +216,7 @@ class GraphicsSystem2D:
             for i in range(len(coordinates)):
                 x1, y1 = coordinates[i]
                 x2, y2 = coordinates[(i + 1) % len(coordinates)]
-                if y1 != y2 and (y1 <= scanline_y <= y2 or y2 <= scanline_y <= y1):
+                if y1 != y2 and (y1 <= scanline_y < y2 or y2 <= scanline_y < y1):
                     x_intersect = x1 + (scanline_y - y1) * (x2 - x1) / (y2 - y1)
                     intersections.append(x_intersect)
             intersections.sort()
@@ -199,8 +224,18 @@ class GraphicsSystem2D:
                 self.canvas.create_line(intersections[i], scanline_y, intersections[i + 1], scanline_y, fill='black')
             scanline_y += 1
 
+    def rotate_vup(self):
+        angle = float(self.entry_rotation.get())
+        self.angle_vup = angle
+        self.draw_display_file()
+
     def draw_display_file(self):
         self.canvas.delete('all')
+
+        try:
+            self.angle_vup = float(self.entry_rotation.get())
+        except ValueError:
+            self.angle_vup = 0  # Definir como 0 se a entrada não for válida
 
         # Redesenha as bordas
         # self.viewport_border = self.canvas.create_rectangle(*self.viewport, outline='red', dash=(5, 5))
