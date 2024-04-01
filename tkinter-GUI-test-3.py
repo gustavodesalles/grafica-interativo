@@ -6,19 +6,19 @@ class DisplayFile2D:
         self.objects = {}  # Dicionário para armazenar objetos
         self.counters = {'point': 0, 'line': 0, 'wireframe': 0}  # Contadores para nomeação dos objetos
 
-    def add_point(self, coordinates):
+    def add_point(self, coordinates, color='black'):
         name = f'Ponto{self.counters["point"] + 1}'
-        self.objects[name] = ('point', coordinates)
+        self.objects[name] = ('point', coordinates, color)
         self.counters['point'] += 1
 
-    def add_line(self, coordinates):
+    def add_line(self, coordinates, color='black'):
         name = f'Reta{self.counters["line"] + 1}'
-        self.objects[name] = ('line', coordinates)
+        self.objects[name] = ('line', coordinates, color)
         self.counters['line'] += 1
 
-    def add_wireframe(self, coordinates):
+    def add_wireframe(self, coordinates, color='black'):
         name = f'Wireframe{self.counters["wireframe"] + 1}'
-        self.objects[name] = ('wireframe', coordinates)
+        self.objects[name] = ('wireframe', coordinates, color)
         self.counters['wireframe'] += 1
 
     def remove_object(self, name):
@@ -288,24 +288,24 @@ class GraphicsSystem2D:
                 new_coords.append((new_coord[0], new_coord[1]))
             self.display_file.objects[obj_name] = ('wireframe', new_coords)
 
-    def draw_object(self, obj_type, coordinates):
+    def draw_object(self, obj_type, coordinates, color):
         if obj_type == 'point':
             x, y = self.transform_to_viewport(*coordinates)
-            self.canvas.create_oval(x, y, x+2, y+2, fill='black')
+            self.canvas.create_oval(x, y, x+2, y+2, fill=color)
         elif obj_type == 'line':
             x1, y1 = self.transform_to_viewport(*coordinates[0])
             x2, y2 = self.transform_to_viewport(*coordinates[1])
-            self.canvas.create_line(x1, y1, x2, y2, fill='black')
+            self.canvas.create_line(x1, y1, x2, y2, fill=color)
         elif obj_type == 'wireframe':
             transformed_coords = [self.transform_to_viewport(*coord) for coord in coordinates]
-            self.draw_wireframe(transformed_coords)
+            self.draw_wireframe(transformed_coords, color)
 
-    def draw_wireframe(self, coordinates):
+    def draw_wireframe(self, coordinates, color):
         # Desenhar as linhas do polígono
         for i in range(len(coordinates)):
             x1, y1 = coordinates[i]
             x2, y2 = coordinates[(i + 1) % len(coordinates)]
-            self.canvas.create_line(x1, y1, x2, y2, fill='black')
+            self.canvas.create_line(x1, y1, x2, y2, fill=color)
 
         # Preencher o interior do polígono manualmente
         scanline_y = min(y for x, y in coordinates)
@@ -334,8 +334,8 @@ class GraphicsSystem2D:
         self.viewport_border = self.canvas.create_rectangle(*self.viewport, outline='red', dash=(5, 5))
         self.window_border = self.canvas.create_rectangle(*self.window, outline='blue')
         
-        for obj_name, (obj_type, coordinates) in self.display_file.objects.items():
-            self.draw_object(obj_type, coordinates)
+        for obj_name, (obj_type, coordinates, color) in self.display_file.objects.items():
+            self.draw_object(obj_type, coordinates, color)
         
         # Atualizar a lista de objetos
         object_names = "\n".join(self.display_file.objects.keys())
