@@ -25,6 +25,19 @@ class DisplayFile2D:
         if name in self.objects:
             del self.objects[name]
 
+class OBJDescriptor:
+    @staticmethod
+    def write_obj_file(file_path, obj_name, obj_type, vertices):
+        with open(file_path, 'w') as f:
+            f.write(f'g {obj_name}\n')
+            for vertex in vertices:
+                f.write(f'v {vertex[0]} {vertex[1]} 0.0\n')
+            if obj_type == 'line':
+                f.write(f'l {1} {2}\n')
+            elif obj_type == 'wireframe':
+                for i in range(1, len(vertices) + 1):
+                    f.write(f'l {i} {i % len(vertices) + 1}\n')
+
 
 class Transformation2D:
     @staticmethod
@@ -94,18 +107,12 @@ class GraphicsSystem2D:
         self.setup_pan_interface()
         self.setup_zoom_interface()
         self.setup_rotation_interface()
+        self.setup_export_object_interface()
+        self.setup_import_object_interface()
 
         self.angle_vup = 0  # Inicializa o ângulo de rotação de Vup como 0
 
     def transform_to_viewport(self, x, y):
-        # xmin, ymin, xmax, ymax = self.window
-        # xvmin, yvmin, xvmax, yvmax = self.viewport
-
-        # xv = ((x - xmin) / (xmax - xmin)) * (xvmax - xvmin) + xvmin
-        # yv = ((y - ymin) / (ymax - ymin)) * (yvmax - yvmin) + yvmin
-
-        # return xv, yv
-    
         # Obter os ângulos de rotação
         theta = np.radians(self.angle_vup)
         cos_theta = np.cos(theta)
@@ -193,6 +200,53 @@ class GraphicsSystem2D:
         self.entry_rotation.pack()
         self.button_rotate_object = tk.Button(self.object_list_frame, text="Rotate Object", command=self.rotate_vup)
         self.button_rotate_object.pack()
+
+    def setup_export_object_interface(self):
+        self.label_export_obj = tk.Label(root, text="Export Obj:")
+        self.label_export_obj.pack()
+
+        self.entry_export_obj_name = tk.Entry(root)
+        self.entry_export_obj_name.pack()
+
+        self.button_export_object = tk.Button(root, text="Export Obj", command=self.export_object)
+        self.button_export_object.pack()
+
+    def setup_import_object_interface(self):
+        self.label_import_obj = tk.Label(root, text="Import Obj:")
+        self.label_import_obj.pack()
+
+        self.entry_import_obj_name = tk.Entry(root)
+        self.entry_import_obj_name.pack()
+
+        self.button_import_object = tk.Button(root, text="Import Obj", command=self.import_object)
+        self.button_import_object.pack()
+
+    def import_object(self):
+        file_name = self.entry_import_obj_name.get()
+        if not file_name.endswith('.obj'):
+            print("O arquivo fornecido não é um arquivo .obj.")
+            return
+
+        vertices = []
+        edges = []
+
+        try:
+            with open(file_name, 'r') as obj_file:
+                lines = obj_file.readlines()
+                for line in lines:
+                    if line.startswith('v'):
+                        _, x, y, _ = line.split()
+                        vertices.append((float(x), float(y)))
+                    elif line.startswith('l'):
+                        _, v1, v2 = line.split()
+                        edges.append(((int(v1), int(v2))))
+
+            self.display_file.add_wireframe((vertices, edges))
+            self.draw_display_file()
+            print("Objeto importado com sucesso.")
+        except FileNotFoundError:
+            print("Arquivo não encontrado. Certifique-se de fornecer o caminho correto.")
+
 
     def transform_object(self):
         obj_name = self.entry_object_name.get()
@@ -336,6 +390,14 @@ class GraphicsSystem2D:
         self.angle_vup = angle
         self.draw_display_file()
 
+    def export_object(self):
+        obj_name = self.entry_export_obj_name.get()
+        if obj_name in self.display_file.objects:
+            obj_type, vertices = self.display_file.objects[obj_name]
+            file_path = f"{obj_name}.obj"
+            OBJDescriptor.write_obj_file(file_path, obj_name, obj_type, vertices)
+            print(f"Objeto '{obj_name}' exportado para '{file_path}'.")
+
 # Exemplo de uso - main file
 root = tk.Tk()
 root.title("2D Graphics System")
@@ -343,7 +405,7 @@ root.title("2D Graphics System")
 display_file = DisplayFile2D()
 display_file.add_line(((-50, -50), (50, 50)))
 display_file.add_point((0, 0))
-display_file.add_wireframe([(100, -100), (100, 100), (-100, 100), (-100, -100)])
+#display_file.add_wireframe([(100, -100), (100, 100), (-100, 100), (-100, -100)])
 
 object_list = tk.Listbox(root)
 
