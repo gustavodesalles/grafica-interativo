@@ -99,6 +99,14 @@ class GraphicsSystem2D:
         self.entry_coordinates = tk.Entry(self.master)
         self.entry_coordinates.pack(side=tk.TOP)
 
+        self.color_string = tk.StringVar()
+        self.c1 = tk.Radiobutton(self.master, text="Red", value="red", variable=self.color_string)
+        self.c2 = tk.Radiobutton(self.master, text="Green", value="green", variable=self.color_string)
+        self.c3 = tk.Radiobutton(self.master, text="Blue", value="blue", variable=self.color_string)
+        self.c1.pack()
+        self.c2.pack()
+        self.c3.pack()
+
         self.button_add_object = tk.Button(self.master, text="Add Object", command=self.add_object)
         self.button_add_object.pack(side=tk.TOP)
         
@@ -214,40 +222,25 @@ class GraphicsSystem2D:
     def draw_object(self, obj):
         if obj.type == 'Point':
             x, y, obj.coordinate_x_scn, obj.coordinate_y_scn = self.transform_to_viewport(obj.coordinate_x, obj.coordinate_y)
-            self.canvas.create_oval(x, y, x+2, y+2, fill='black')
+            self.canvas.create_oval(x, y, x+2, y+2, fill=obj.color)
         elif obj.type == 'Line':
             x1, y1, obj.start_point_scn[0], obj.start_point_scn[1] = self.transform_to_viewport(obj.start_point[0], obj.start_point[1])
             x2, y2, obj.end_point_scn[0], obj.end_point_scn[1] = self.transform_to_viewport(obj.end_point[0], obj.end_point[1])
-            self.canvas.create_line(x1, y1, x2, y2, fill='black')
+            self.canvas.create_line(x1, y1, x2, y2, fill=obj.color)
         elif obj.type == 'Wireframe':
             transformed_coords = []
             for i in range(len(obj.point_list)):
                 point = obj.point_list[i]
                 x, y, obj.point_list_scn[i][0], obj.point_list_scn[i][1] = self.transform_to_viewport(point[0], point[1])
                 transformed_coords.append((x, y))
-            self.draw_wireframe(transformed_coords)
+            self.draw_wireframe(transformed_coords, obj.color)
 
-    def draw_wireframe(self, coordinates):
+    def draw_wireframe(self, coordinates, color):
         # Desenhar as linhas do polígono
         for i in range(len(coordinates)):
             x1, y1 = coordinates[i]
             x2, y2 = coordinates[(i + 1) % len(coordinates)]
-            self.canvas.create_line(x1, y1, x2, y2, fill='black')
-
-        # Preencher o interior do polígono manualmente
-        scanline_y = min(y for x, y in coordinates)
-        while scanline_y <= max(y for x, y in coordinates):
-            intersections = []
-            for i in range(len(coordinates)):
-                x1, y1 = coordinates[i]
-                x2, y2 = coordinates[(i + 1) % len(coordinates)]
-                if y1 != y2 and (y1 <= scanline_y < y2 or y2 <= scanline_y < y1):
-                    x_intersect = x1 + (scanline_y - y1) * (x2 - x1) / (y2 - y1)
-                    intersections.append(x_intersect)
-            intersections.sort()
-            for i in range(0, len(intersections), 2):
-                self.canvas.create_line(intersections[i], scanline_y, intersections[i + 1], scanline_y, fill='black')
-            scanline_y += 1
+            self.canvas.create_line(x1, y1, x2, y2, fill=color)
 
     def rotate_vup(self):
         angle = float(self.entry_rotation.get())
@@ -312,17 +305,18 @@ class GraphicsSystem2D:
 
     def add_object(self):
         coordinates_str = self.entry_coordinates.get()
+        object_color = self.color_string.get()
         coordinates = coordinates_str.split(",")
         coordinates_head = coordinates.pop(0)
         coordinates = list(map(lambda x: int(x), coordinates))
         coordinates = [(coordinates[i], coordinates[i+1]) for i in range(0, len(coordinates), 2)]
 
         if coordinates_head.upper() == "POINT":
-            self.display_file.add_point(coordinates[0])
+            self.display_file.add_point(coordinates[0], object_color)
         elif coordinates_head.upper() == "LINE":
-            self.display_file.add_line(coordinates)
+            self.display_file.add_line(coordinates, object_color)
         elif coordinates_head.upper() == "WIREFRAME":
-            self.display_file.add_wireframe(coordinates)
+            self.display_file.add_wireframe(coordinates, object_color)
         else:
             print("Unable to add object")
         self.draw_display_file()
