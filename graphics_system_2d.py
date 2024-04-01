@@ -120,8 +120,18 @@ class GraphicsSystem2D:
         self.label_transformation = tk.Label(self.master, text="Transformation")
         self.label_transformation.pack()
 
-        self.entry_transformation = tk.Entry(self.master)
-        self.entry_transformation.pack()
+        # self.entry_transformation = tk.Entry(self.master)
+        self.entry_transformation = tk.StringVar()
+        self.r1 = tk.Radiobutton(self.master, text="Translation", value="translation", variable=self.entry_transformation)
+        self.r2 = tk.Radiobutton(self.master, text="Scaling", value="scaling", variable=self.entry_transformation)
+        self.r3 = tk.Radiobutton(self.master, text="Rotation around origin", value="rotation", variable=self.entry_transformation)
+        self.r4 = tk.Radiobutton(self.master, text="Rotation around object's center", value="center_rotation", variable=self.entry_transformation)
+        self.r5 = tk.Radiobutton(self.master, text="Rotation around arbitrary point", value="arbitrary_rotation", variable=self.entry_transformation)
+        self.r1.pack()
+        self.r2.pack()
+        self.r3.pack()
+        self.r4.pack()
+        self.r5.pack()
 
         self.label_object_name = tk.Label(self.master, text="Object Name:")
         self.label_object_name.pack()
@@ -152,28 +162,42 @@ class GraphicsSystem2D:
             print("OBJECT DOES NOT EXIST")
             return
 
-        transformation = self.entry_transformation.get()
+        transformation = self.entry_transformation.get().lower()
         transformation_params = self.entry_params.get().split(',')
+        transformation_matrix = None
+        obj = self.display_file.objects[obj_name]
 
         if transformation == 'translation':
             tx, ty = map(float, transformation_params)
-            transformation_matrix = Transformation2D.translation(tx, ty)
+            theta = np.radians(- self.angle_vup)
+            cos_theta = np.cos(theta)
+            sin_theta = np.sin(theta)
+            tx_r = tx * cos_theta - ty * sin_theta
+            ty_r = tx * sin_theta + ty * cos_theta
+            transformation_matrix = Transformation2D.translation(tx_r, ty_r)
         elif transformation == 'rotation':
             angle = float(transformation_params[0])
             transformation_matrix = Transformation2D.rotation(angle)
         elif transformation == 'scaling':
             sx, sy = map(float, transformation_params)
-            transformation_matrix = Transformation2D.scale(sx, sy)
+            center = self.get_object_center(obj)
+            transformation_matrix = Transformation2D.scale(sx, sy, center)
         elif transformation == 'arbitrary_rotation':
             angle = float(transformation_params[0])
             center = tuple(map(float, transformation_params[1:]))
             transformation_matrix = Transformation2D.arbitrary_rotation(angle, center)
+        elif transformation == 'center_rotation':
+            angle = float(transformation_params[0])
+            center = self.get_object_center(obj)
+            transformation_matrix = Transformation2D.arbitrary_rotation(angle, center)
 
-        self.apply_transformation(obj_name, transformation_matrix)
-        self.draw_display_file()
+        if transformation_matrix is not None:
+            self.apply_transformation(obj, transformation_matrix)
+            self.draw_display_file()
+        else:
+            print('No transformation')
 
-    def apply_transformation(self, obj_name, transformation_matrix):
-        obj = self.display_file.objects[obj_name]
+    def apply_transformation(self, obj, transformation_matrix):
         if obj.type == 'Point':
             new_coordinates = np.dot(transformation_matrix, np.array([obj.coordinate_x, obj.coordinate_y, 1]))
             obj.coordinate_x = new_coordinates[0]
@@ -259,11 +283,11 @@ class GraphicsSystem2D:
         self.window.ymax += dy
 
     def pan_left(self):
-        self.pan(-20, 0)
+        self.pan(20, 0)
         self.draw_display_file()
 
     def pan_right(self):
-        self.pan(20, 0)
+        self.pan(-20, 0)
         self.draw_display_file()
 
     def zoom(self, factor):
@@ -306,3 +330,13 @@ class GraphicsSystem2D:
         object_name = self.entry_object_name.get()
         self.display_file.remove_object(object_name)
         self.draw_display_file()
+
+    def get_object_center(self, obj):
+        if obj.type == "Point":
+            return obj.coordinate_x, obj.coordinate_y
+        elif obj.type == "Line":
+            return (obj.start_point[0] + obj.end_point[0]) / 2, (obj.start_point[1] + obj.end_point[1]) / 2
+        elif obj.type == "Wireframe":
+            center_x = sum([p[0] for p in obj.point_list]) / len(obj.point_list)
+            center_y = sum([p[1] for p in obj.point_list]) / len(obj.point_list)
+            return center_x, center_y
