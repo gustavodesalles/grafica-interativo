@@ -208,7 +208,8 @@ class GraphicsSystem2D:
         elif obj.type == 'Wireframe':
             for i in range(len(obj.point_list)):
                 point = obj.point_list[i]
-                obj.point_list[i] = np.dot(transformation_matrix, np.array([point[0], point[1], 1]))
+                point_vector = np.dot(transformation_matrix, np.array([point[0], point[1], 1]))
+                obj.point_list[i] = (point_vector[0], point_vector[1])
 
     def draw_object(self, obj):
         if obj.type == 'Point':
