@@ -27,7 +27,7 @@ class DisplayFile2D:
 
 class OBJDescriptor:
     @staticmethod
-    def write_obj_file(file_path, obj_name, obj_type, vertices):
+    def write_obj_file(file_path, obj_name, obj_type, vertices, color):
         with open(file_path, 'w') as f:
             f.write(f'g {obj_name}\n')
             for vertex in vertices:
@@ -37,6 +37,8 @@ class OBJDescriptor:
             elif obj_type == 'wireframe':
                 for i in range(1, len(vertices) + 1):
                     f.write(f'l {i} {i % len(vertices) + 1}\n')
+            # Escrever a cor como um comentário
+            f.write(f'# Color: {color}\n')
 
 
 class Transformation2D:
@@ -222,30 +224,32 @@ class GraphicsSystem2D:
         self.button_import_object.pack()
 
     def import_object(self):
-        file_name = self.entry_import_obj_name.get()
-        if not file_name.endswith('.obj'):
-            print("O arquivo fornecido não é um arquivo .obj.")
-            return
-
-        vertices = []
-        edges = []
-
+        file_path = self.entry_import_obj_name.get()
         try:
-            with open(file_name, 'r') as obj_file:
-                lines = obj_file.readlines()
+            with open(file_path, 'r') as f:
+                vertices = []
+                lines = f.readlines()
                 for line in lines:
                     if line.startswith('v'):
                         _, x, y, _ = line.split()
                         vertices.append((float(x), float(y)))
-                    elif line.startswith('l'):
-                        _, v1, v2 = line.split()
-                        edges.append(((int(v1), int(v2))))
+                obj_name = f'Imported_Object_{len(self.display_file.objects) + 1}'
+                self.display_file.add_wireframe(vertices)
+                self.draw_display_file()
+                print(f"Objeto importado de '{file_path}'.")
 
-            self.display_file.add_wireframe((vertices, edges))
-            self.draw_display_file()
-            print("Objeto importado com sucesso.")
+                # Check for color information
+                color_line_index = lines.index("# Color: black\n") if "# Color: black\n" in lines else -1
+                if color_line_index != -1:
+                    color_line = lines[color_line_index]
+                    # Extract color information if available
+                    color = color_line.split(":")[1].strip()
+                    print(f"Cor do objeto: {color}")
+                else:
+                    print("Nenhuma informação de cor encontrada.")
         except FileNotFoundError:
-            print("Arquivo não encontrado. Certifique-se de fornecer o caminho correto.")
+            print(f"Arquivo '{file_path}' não encontrado.")
+
 
 
     def transform_object(self):
@@ -288,24 +292,24 @@ class GraphicsSystem2D:
                 new_coords.append((new_coord[0], new_coord[1]))
             self.display_file.objects[obj_name] = ('wireframe', new_coords)
 
-    def draw_object(self, obj_type, coordinates, color):
+    def draw_object(self, obj_type, coordinates, color='black'):
         if obj_type == 'point':
-            x, y = self.transform_to_viewport(*coordinates)
+            x, y = self.transform_to_viewport(*coordinates[:2])
             self.canvas.create_oval(x, y, x+2, y+2, fill=color)
         elif obj_type == 'line':
-            x1, y1 = self.transform_to_viewport(*coordinates[0])
-            x2, y2 = self.transform_to_viewport(*coordinates[1])
+            x1, y1 = self.transform_to_viewport(*coordinates[0][:2])
+            x2, y2 = self.transform_to_viewport(*coordinates[1][:2])
             self.canvas.create_line(x1, y1, x2, y2, fill=color)
         elif obj_type == 'wireframe':
             transformed_coords = [self.transform_to_viewport(*coord) for coord in coordinates]
-            self.draw_wireframe(transformed_coords, color)
+            self.draw_wireframe(transformed_coords)
 
-    def draw_wireframe(self, coordinates, color):
+    def draw_wireframe(self, coordinates):
         # Desenhar as linhas do polígono
         for i in range(len(coordinates)):
             x1, y1 = coordinates[i]
             x2, y2 = coordinates[(i + 1) % len(coordinates)]
-            self.canvas.create_line(x1, y1, x2, y2, fill=color)
+            self.canvas.create_line(x1, y1, x2, y2, fill='black')
 
         # Preencher o interior do polígono manualmente
         scanline_y = min(y for x, y in coordinates)
@@ -393,10 +397,24 @@ class GraphicsSystem2D:
     def export_object(self):
         obj_name = self.entry_export_obj_name.get()
         if obj_name in self.display_file.objects:
-            obj_type, vertices = self.display_file.objects[obj_name]
+            obj_data = self.display_file.objects[obj_name]
+            if len(obj_data) == 2:  # Sem cor associada
+                obj_type, vertices = obj_data
+                color = "black"  # Cor padrão
+            elif len(obj_data) == 3:  # Com cor associada
+                obj_type, vertices, color = obj_data
+            else:
+                print("Formato de objeto inválido.")
+                return
+
             file_path = f"{obj_name}.obj"
-            OBJDescriptor.write_obj_file(file_path, obj_name, obj_type, vertices)
-            print(f"Objeto '{obj_name}' exportado para '{file_path}'.")
+            if obj_type == 'wireframe':
+                OBJDescriptor.write_obj_file(file_path, obj_name, obj_type, vertices, color)
+                print(f"Objeto '{obj_name}' exportado para '{file_path}'.")
+            else:
+                print("Apenas objetos do tipo 'wireframe' podem ser exportados.")
+        else:
+            print(f"O objeto '{obj_name}' não existe na lista de objetos.")
 
 # Exemplo de uso - main file
 root = tk.Tk()
@@ -405,7 +423,7 @@ root.title("2D Graphics System")
 display_file = DisplayFile2D()
 display_file.add_line(((-50, -50), (50, 50)))
 display_file.add_point((0, 0))
-#display_file.add_wireframe([(100, -100), (100, 100), (-100, 100), (-100, -100)])
+display_file.add_wireframe([(100, -100), (100, 100), (-100, 100), (-100, -100)])
 
 object_list = tk.Listbox(root)
 
