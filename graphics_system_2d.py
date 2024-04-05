@@ -2,6 +2,7 @@ import tkinter as tk
 
 import numpy as np
 
+from obj_descriptor import OBJDescriptor
 from transformation_2d import Transformation2D
 from window import Window
 
@@ -38,6 +39,8 @@ class GraphicsSystem2D:
         self.setup_remove_object_interface()
         self.setup_transformation_interface()
         self.setup_rotation_interface()
+        self.setup_export_object_interface()
+        self.setup_import_object_interface()
 
         self.angle_vup = 0  # Inicializa o ângulo de rotação de Vup como 0
 
@@ -161,8 +164,85 @@ class GraphicsSystem2D:
         self.label_rotation.pack()
         self.entry_rotation = tk.Entry(self.master)
         self.entry_rotation.pack()
-        self.button_rotate_object = tk.Button(self.object_list_frame, text="Rotate Object", command=self.rotate_vup)
-        self.button_rotate_object.pack()
+        self.button_rotate_window = tk.Button(self.object_list_frame, text="Rotate Window", command=self.rotate_vup)
+        self.button_rotate_window.pack()
+
+    def setup_export_object_interface(self):
+        self.label_export_obj = tk.Label(self.master, text="Export Obj:")
+        self.label_export_obj.pack()
+
+        self.entry_export_obj_name = tk.Entry(self.master)
+        self.entry_export_obj_name.pack()
+
+        self.button_export_object = tk.Button(self.master, text="Export Obj", command=self.export_object)
+        self.button_export_object.pack()
+
+    def setup_import_object_interface(self):
+        self.label_import_obj = tk.Label(self.master, text="Import Obj:")
+        self.label_import_obj.pack()
+
+        self.entry_import_obj_name = tk.Entry(self.master)
+        self.entry_import_obj_name.pack()
+
+        self.button_import_object = tk.Button(self.master, text="Import Obj", command=self.import_object)
+        self.button_import_object.pack()
+
+    def import_object(self):
+        file_path = self.entry_import_obj_name.get()
+        try:
+            with open(file_path, 'r') as f:
+                vertices = []
+                lines = f.readlines()
+                for line in lines:
+                    if line.startswith('v'):
+                        _, x, y, _ = line.split()
+                        vertices.append((float(x), float(y)))
+                # obj_name = f'Imported_Object_{len(self.display_file.objects) + 1}'
+
+                # Check for color information
+                # color_line_index = lines.index("# Color: black\n") if "# Color: black\n" in lines else -1
+                color = lines[-1].split(":")[1].strip()
+                if color in ['red', 'green', 'blue', 'black']:
+                    # color_line = lines[color_line_index]
+                    # # Extract color information if available
+                    # color = color_line.split(":")[1].strip()
+                    print(f"Cor do objeto: {color}")
+                else:
+                    print("Nenhuma informação de cor encontrada.")
+                    color = 'black'
+
+                if len(vertices) == 1:
+                    self.display_file.add_point(vertices[0], color)
+                elif len(vertices) == 2:
+                    self.display_file.add_line(vertices, color)
+                elif len(vertices) > 0:
+                    self.display_file.add_wireframe(vertices, color)
+                self.draw_display_file()
+                print(f"Objeto importado de '{file_path}'.")
+        except FileNotFoundError:
+            print(f"Arquivo '{file_path}' não encontrado.")
+
+    def export_object(self):
+        obj_name = self.entry_export_obj_name.get()
+        if obj_name in self.display_file.objects:
+            obj = self.display_file.objects[obj_name]
+            # if len(obj_data) == 2:  # Sem cor associada
+            #     obj_type, vertices = obj_data
+            #     color = "black"  # Cor padrão
+            # elif len(obj_data) == 3:  # Com cor associada
+            #     obj_type, vertices, color = obj_data
+            # else:
+            #     print("Formato de objeto inválido.")
+            #     return
+
+            file_path = f"{obj_name}.obj"
+            # if obj.type in ['Point', 'Line', 'Wireframe']:
+            OBJDescriptor.write_obj_file(file_path, obj)
+            print(f"Objeto '{obj_name}' exportado para '{file_path}'.")
+            # else:
+            #     print("Apenas objetos do tipo 'point', 'line' ou 'wireframe' podem ser exportados.")
+        else:
+            print(f"O objeto '{obj_name}' não existe na lista de objetos.")
 
     def transform_object(self):
         obj_name = self.entry_object_name_transform.get()
