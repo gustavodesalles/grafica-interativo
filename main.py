@@ -6,6 +6,7 @@ from graphics_system_2d import GraphicsSystem2D
 # Exemplo de uso - main file
 root = tk.Tk()
 root.title("2D Graphics System")
+root.geometry("1200x900")
 
 display_file = DisplayFile2D()
 display_file.add_line(((-50, -50), (50, 50)), 'red')

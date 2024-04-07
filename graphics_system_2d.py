@@ -81,7 +81,7 @@ class GraphicsSystem2D:
 
     def setup_object_list_interface(self):
         self.object_list_frame = tk.Frame(self.master)
-        self.object_list_frame.pack(side=tk.RIGHT)
+        self.object_list_frame.pack()
         self.object_list_title = tk.Label(self.object_list_frame, text="Object List")
         self.object_list_title.pack()
         self.object_list_label = tk.Label(self.object_list_frame, text="")
@@ -164,7 +164,7 @@ class GraphicsSystem2D:
         self.label_rotation.pack()
         self.entry_rotation = tk.Entry(self.master)
         self.entry_rotation.pack()
-        self.button_rotate_window = tk.Button(self.object_list_frame, text="Rotate Window", command=self.rotate_vup)
+        self.button_rotate_window = tk.Button(self.master, text="Rotate Window", command=self.rotate_vup)
         self.button_rotate_window.pack()
 
     def setup_export_object_interface(self):
@@ -200,12 +200,8 @@ class GraphicsSystem2D:
                 # obj_name = f'Imported_Object_{len(self.display_file.objects) + 1}'
 
                 # Check for color information
-                # color_line_index = lines.index("# Color: black\n") if "# Color: black\n" in lines else -1
                 color = lines[-1].split(":")[1].strip()
                 if color in ['red', 'green', 'blue', 'black']:
-                    # color_line = lines[color_line_index]
-                    # # Extract color information if available
-                    # color = color_line.split(":")[1].strip()
                     print(f"Cor do objeto: {color}")
                 else:
                     print("Nenhuma informação de cor encontrada.")
@@ -226,21 +222,10 @@ class GraphicsSystem2D:
         obj_name = self.entry_export_obj_name.get()
         if obj_name in self.display_file.objects:
             obj = self.display_file.objects[obj_name]
-            # if len(obj_data) == 2:  # Sem cor associada
-            #     obj_type, vertices = obj_data
-            #     color = "black"  # Cor padrão
-            # elif len(obj_data) == 3:  # Com cor associada
-            #     obj_type, vertices, color = obj_data
-            # else:
-            #     print("Formato de objeto inválido.")
-            #     return
 
             file_path = f"{obj_name}.obj"
-            # if obj.type in ['Point', 'Line', 'Wireframe']:
             OBJDescriptor.write_obj_file(file_path, obj)
             print(f"Objeto '{obj_name}' exportado para '{file_path}'.")
-            # else:
-            #     print("Apenas objetos do tipo 'point', 'line' ou 'wireframe' podem ser exportados.")
         else:
             print(f"O objeto '{obj_name}' não existe na lista de objetos.")
 
