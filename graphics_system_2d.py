@@ -342,11 +342,11 @@ class GraphicsSystem2D:
         self.window.ymax += dy
 
     def pan_left(self):
-        self.pan(20, 0)
+        self.pan(-20, 0)
         self.draw_display_file()
 
     def pan_right(self):
-        self.pan(-20, 0)
+        self.pan(20, 0)
         self.draw_display_file()
 
     def zoom(self, factor):

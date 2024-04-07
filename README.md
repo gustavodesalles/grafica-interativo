@@ -21,3 +21,11 @@ Campo Coordinates
 - Ponto: "point,x,y"
 - Reta: "line,x1,y1,x2,y2"
 - Wireframe: "wireframe,x1,y1,x2,y2,...,xn,yn"
+
+Rotação da window: inserir apenas o número do ângulo (em graus)
+
+Import e export
+- Import: <nome_do_objeto>.obj
+- Export: <nome_do_objeto> (sem extensão)
+
+Ao realizar o export, o arquivo será gerado na pasta do projeto.
