@@ -32,9 +32,7 @@ class OBJDescriptor:
             f.write(f'g {obj_name}\n')
             for vertex in vertices:
                 f.write(f'v {vertex[0]} {vertex[1]} 0.0\n')
-            if obj_type == 'line':
-                f.write(f'l {1} {2}\n')
-            elif obj_type == 'wireframe':
+            if obj_type == 'line' or obj_type == 'wireframe':
                 for i in range(1, len(vertices) + 1):
                     f.write(f'l {i} {i % len(vertices) + 1}\n')
             # Escrever a cor como um comentário
@@ -96,11 +94,26 @@ class GraphicsSystem2D:
         self.label_window = tk.Label(master, text="Window", font=('Helvetica', 14))
         self.label_window.place(x=100, y=10)
 
-        # Desenhar a borda da viewport
-        self.viewport_border = self.canvas.create_rectangle(*self.viewport, outline='red', dash=(5, 5))
-        
-        # Desenhar a borda da janela
-        self.window_border = self.canvas.create_rectangle(*self.window, outline='blue')
+        canvas_width = self.canvas.winfo_reqwidth()
+        canvas_height = self.canvas.winfo_reqheight()
+
+        # Ajustar a viewport para ser menor que o objeto de desenho
+        viewport_margin = 20
+        self.viewport = [
+            canvas_width // 4 + viewport_margin,
+            canvas_height // 4 + viewport_margin,
+            3 * canvas_width // 4 - viewport_margin,
+            3 * canvas_height // 4 - viewport_margin
+        ]
+
+        # Ajustar a janela para ser igual ao canvas
+        self.window = [0, 0, canvas_width, canvas_height]
+
+        # Desenhar uma moldura ao redor da viewport
+        self.viewport_frame = self.canvas.create_rectangle(*self.viewport, outline='green')
+
+        # Inicializar a técnica de clipagem atual
+        self.clipping_method = 'parametric'
 
         self.setup_object_list_interface()
         self.setup_remove_object_interface()
@@ -111,6 +124,7 @@ class GraphicsSystem2D:
         self.setup_rotation_interface()
         self.setup_export_object_interface()
         self.setup_import_object_interface()
+        self.setup_clipping_interface()
 
         self.angle_vup = 0  # Inicializa o ângulo de rotação de Vup como 0
 
@@ -223,6 +237,121 @@ class GraphicsSystem2D:
         self.button_import_object = tk.Button(root, text="Import Obj", command=self.import_object)
         self.button_import_object.pack()
 
+    def setup_clipping_interface(self):
+       # Adicionar radio buttons para selecionar a técnica de clipagem
+        self.label_clipping_method = tk.Label(self.master, text="Clipping Method")
+        self.label_clipping_method.pack()
+
+        self.var_clipping_method = tk.StringVar()
+        self.var_clipping_method.set('parametric')
+
+        self.radio_parametric = tk.Radiobutton(self.master, text="Parametric Clipping", variable=self.var_clipping_method, value='parametric', command=self.change_clipping_method)
+        self.radio_parametric.pack()
+
+        self.radio_cohen_sutherland = tk.Radiobutton(self.master, text="Cohen-Sutherland Clipping", variable=self.var_clipping_method, value='cohen_sutherland', command=self.change_clipping_method)
+        self.radio_cohen_sutherland.pack()
+
+
+    def change_clipping_method(self):
+        self.clipping_method = self.var_clipping_method.get()
+
+    def clip_line(self, x1, y1, x2, y2):
+        if self.clipping_method == 'parametric':
+            return self.clip_parametric(x1, y1, x2, y2)
+        elif self.clipping_method == 'cohen_sutherland':
+            return self.clip_cohen_sutherland(x1, y1, x2, y2)
+
+    def clip_parametric(self, x1, y1, x2, y2):
+        # Implementação do algoritmo de clipagem usando a equação paramétrica da reta
+        # Checagem por meio da equação paramétrica envolvendo os limites da janela e a própria linha
+        # Retorna as coordenadas clipadas (x1_clip, y1_clip, x2_clip, y2_clip)
+        xmin, ymin, xmax, ymax = self.window
+        t1 = 0
+        t2 = 1
+
+        dx = x2 - x1
+        dy = y2 - y1
+
+        # Parâmetros da equação paramétrica da reta
+        p = [-dx, dx, -dy, dy]
+        q = [x1 - xmin, xmax - x1, y1 - ymin, ymax - y1]
+
+        for i in range(4):
+            if p[i] == 0:
+                if q[i] < 0:
+                    return None  # Linha está fora da janela
+            else:
+                r = q[i] / p[i]
+                if p[i] < 0:
+                    t1 = max(t1, r)
+                else:
+                    t2 = min(t2, r)
+
+        if t1 > t2:
+            return None  # Linha está fora da janela
+
+        x1_clip = x1 + t1 * dx
+        y1_clip = y1 + t1 * dy
+        x2_clip = x1 + t2 * dx
+        y2_clip = y1 + t2 * dy
+
+        return x1_clip, y1_clip, x2_clip, y2_clip
+
+    def clip_cohen_sutherland(self, x1, y1, x2, y2):
+        # Implementação do algoritmo de recorte de Cohen-Sutherland
+        # Retorna as coordenadas clipadas (x1_clip, y1_clip, x2_clip, y2_clip)
+        xmin, ymin, xmax, ymax = self.window
+        # Códigos de região para os pontos inicial e final da linha
+        code1 = self.calculate_region_code(x1, y1)
+        code2 = self.calculate_region_code(x2, y2)
+
+        while True:
+            if not (code1 | code2):  # Ambos pontos estão dentro da janela
+                return x1, y1, x2, y2
+
+            if code1 & code2:  # Ambos pontos estão fora da janela
+                return None
+
+            # Escolher um dos pontos fora da janela
+            code_outside = code1 if code1 else code2
+
+            # Encontrar o ponto de interseção
+            if code_outside & 1:  # Topo da janela
+                x = x1 + (x2 - x1) * (ymax - y1) / (y2 - y1)
+                y = ymax
+            elif code_outside & 2:  # Fundo da janela
+                x = x1 + (x2 - x1) * (ymin - y1) / (y2 - y1)
+                y = ymin
+            elif code_outside & 4:  # Direita da janela
+                y = y1 + (y2 - y1) * (xmax - x1) / (x2 - x1)
+                x = xmax
+            elif code_outside & 8:  # Esquerda da janela
+                y = y1 + (y2 - y1) * (xmin - x1) / (x2 - x1)
+                x = xmin
+
+            # Substituir o ponto fora da janela pelo ponto de interseção
+            if code_outside == code1:
+                x1, y1 = x, y
+                code1 = self.calculate_region_code(x1, y1)
+            else:
+                x2, y2 = x, y
+                code2 = self.calculate_region_code(x2, y2)
+        
+    def calculate_region_code(self, x, y):
+        code = 0
+        xmin, ymin, xmax, ymax = self.window
+
+        if x < xmin:  # Esquerda da janela
+            code |= 1
+        elif x > xmax:  # Direita da janela
+            code |= 2
+        if y < ymin:  # Topo da janela
+            code |= 4
+        elif y > ymax:  # Fundo da janela
+            code |= 8
+
+        return code
+
     def import_object(self):
         file_path = self.entry_import_obj_name.get()
         try:
@@ -234,10 +363,7 @@ class GraphicsSystem2D:
                         _, x, y, _ = line.split()
                         vertices.append((float(x), float(y)))
                 obj_name = f'Imported_Object_{len(self.display_file.objects) + 1}'
-                self.display_file.add_wireframe(vertices)
-                self.draw_display_file()
-                print(f"Objeto importado de '{file_path}'.")
-
+                
                 # Check for color information
                 color_line_index = lines.index("# Color: black\n") if "# Color: black\n" in lines else -1
                 if color_line_index != -1:
@@ -246,10 +372,20 @@ class GraphicsSystem2D:
                     color = color_line.split(":")[1].strip()
                     print(f"Cor do objeto: {color}")
                 else:
-                    print("Nenhuma informação de cor encontrada.")
+                    color = "black"  # Default color
+                    
+                # Check the type of object and add it appropriately
+                if "l" in lines[0]:  # Check if the object is a line
+                    self.display_file.add_line(vertices, color)
+                elif "v" in lines[0]:  # Check if the object is a point
+                    self.display_file.add_point(vertices, color)
+                elif "f" in lines[0]:  # Check if the object is a wireframe
+                    self.display_file.add_wireframe(vertices, color)
+                    
+                self.draw_display_file()
+                print(f"Objeto importado de '{file_path}'.")
         except FileNotFoundError:
             print(f"Arquivo '{file_path}' não encontrado.")
-
 
 
     def transform_object(self):
@@ -294,15 +430,21 @@ class GraphicsSystem2D:
 
     def draw_object(self, obj_type, coordinates, color='black'):
         if obj_type == 'point':
-            x, y = self.transform_to_viewport(*coordinates[:2])
-            self.canvas.create_oval(x, y, x+2, y+2, fill=color)
+            x, y = self.transform_to_viewport(*coordinates)  # Apenas um conjunto de coordenadas para o ponto
+            if self.clip_point(x, y):
+                self.canvas.create_oval(x, y, x + 2, y + 2, fill=color)  # Desenha um pequeno oval para representar o ponto
         elif obj_type == 'line':
-            x1, y1 = self.transform_to_viewport(*coordinates[0][:2])
-            x2, y2 = self.transform_to_viewport(*coordinates[1][:2])
+            x1, y1 = self.transform_to_viewport(*coordinates[:2])  # As coordenadas da reta estão no primeiro conjunto
+            x2, y2 = self.transform_to_viewport(*coordinates[2:])  # As coordenadas da reta estão no segundo conjunto
             self.canvas.create_line(x1, y1, x2, y2, fill=color)
         elif obj_type == 'wireframe':
             transformed_coords = [self.transform_to_viewport(*coord) for coord in coordinates]
             self.draw_wireframe(transformed_coords)
+
+
+    def clip_point(self, x, y):
+        # Verificar se o ponto está dentro da viewport
+        return self.viewport[0] <= x <= self.viewport[2] and self.viewport[1] <= y <= self.viewport[3]
 
     def draw_wireframe(self, coordinates):
         # Desenhar as linhas do polígono
@@ -339,11 +481,22 @@ class GraphicsSystem2D:
         self.window_border = self.canvas.create_rectangle(*self.window, outline='blue')
         
         for obj_name, (obj_type, coordinates, color) in self.display_file.objects.items():
-            self.draw_object(obj_type, coordinates, color)
-        
-        # Atualizar a lista de objetos
-        object_names = "\n".join(self.display_file.objects.keys())
-        self.object_list_label.config(text=object_names)
+            if obj_type == 'line':
+                x1, y1 = coordinates[0]
+                x2, y2 = coordinates[1]
+                if self.clipping_method == 'parametric':
+                    clipped_coords = self.clip_parametric(x1, y1, x2, y2)
+                elif self.clipping_method == 'cohen_sutherland':
+                    clipped_coords = self.clip_cohen_sutherland(x1, y1, x2, y2)
+                else:
+                    clipped_coords = (x1, y1, x2, y2)
+                if clipped_coords and isinstance(clipped_coords, tuple):  # Verifica se clipped_coords é uma tupla
+                    self.draw_object(obj_type, clipped_coords, color)
+            elif obj_type == 'point':
+                self.draw_object(obj_type, coordinates, color)  # Desenha o ponto diretamente
+            else:
+                self.draw_object(obj_type, coordinates, color)
+
 
     def pan(self, dx, dy):
         self.window[0] += dx
@@ -386,8 +539,14 @@ class GraphicsSystem2D:
     def add_object(self):
         coordinates_str = self.entry_coordinates.get()
         coordinates = eval(coordinates_str)
-        display_file.add_wireframe(coordinates)
-        graphics_system.draw_display_file()
+        if len(coordinates) == 1:
+            self.display_file.add_point(coordinates)
+        elif len(coordinates) == 2:
+            self.display_file.add_line(coordinates)
+        elif len(coordinates) > 2:
+            self.display_file.add_wireframe(coordinates)
+        self.draw_display_file()
+
 
     def rotate_vup(self):
         angle = float(self.entry_rotation.get())
@@ -408,13 +567,14 @@ class GraphicsSystem2D:
                 return
 
             file_path = f"{obj_name}.obj"
-            if obj_type == 'wireframe':
+            if obj_type in ['point', 'line', 'wireframe']:  # Modificação aqui
                 OBJDescriptor.write_obj_file(file_path, obj_name, obj_type, vertices, color)
                 print(f"Objeto '{obj_name}' exportado para '{file_path}'.")
             else:
-                print("Apenas objetos do tipo 'wireframe' podem ser exportados.")
+                print("Apenas objetos do tipo 'point', 'line' ou 'wireframe' podem ser exportados.")  # Modificação aqui
         else:
             print(f"O objeto '{obj_name}' não existe na lista de objetos.")
+
 
 # Exemplo de uso - main file
 root = tk.Tk()
@@ -422,8 +582,8 @@ root.title("2D Graphics System")
 
 display_file = DisplayFile2D()
 display_file.add_line(((-50, -50), (50, 50)))
-display_file.add_point((0, 0))
-display_file.add_wireframe([(100, -100), (100, 100), (-100, 100), (-100, -100)])
+display_file.add_point((50, 90))
+#display_file.add_wireframe([(100, -100), (100, 100), (-100, 100), (-100, -100)])
 
 object_list = tk.Listbox(root)
 
