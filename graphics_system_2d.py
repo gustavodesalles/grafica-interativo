@@ -265,16 +265,16 @@ class GraphicsSystem2D:
             code_outside = code1 if code1 else code2
 
             # Encontrar o ponto de interseção
-            if code_outside & 1:  # Topo da janela
+            if code_outside & 8:  # Topo da janela
                 x = x1 + (x2 - x1) * (ymax - y1) / (y2 - y1)
                 y = ymax
-            elif code_outside & 2:  # Fundo da janela
+            elif code_outside & 4:  # Fundo da janela
                 x = x1 + (x2 - x1) * (ymin - y1) / (y2 - y1)
                 y = ymin
-            elif code_outside & 4:  # Direita da janela
+            elif code_outside & 2:  # Direita da janela
                 y = y1 + (y2 - y1) * (xmax - x1) / (x2 - x1)
                 x = xmax
-            elif code_outside & 8:  # Esquerda da janela
+            elif code_outside & 1:  # Esquerda da janela
                 y = y1 + (y2 - y1) * (xmin - x1) / (x2 - x1)
                 x = xmin
 
@@ -451,42 +451,19 @@ class GraphicsSystem2D:
     def draw_display_file(self):
         self.canvas.delete('all')
 
-        try:
-            self.angle_vup = float(self.entry_rotation.get())
-        except ValueError:
-            self.angle_vup = 0  # Definir como 0 se a entrada não for válida
-
         # Redesenha as bordas
         self.viewport_border = self.canvas.create_rectangle(self.viewport.coordinates(), outline='red', dash=(5, 5))
         self.window_border = self.canvas.create_rectangle(self.window.coordinates(), outline='blue')
 
         for obj in self.display_file.objects.values():
             self.draw_object(obj)
-            # if obj.type == 'Line':
-            #     x1, y1 = obj.start_point[0], obj.start_point[1]
-            #     x2, y2 = obj.end_point[0], obj.end_point[1]
-            #     if self.clipping_method == 'parametric':
-            #         clipped_coords = self.clip_parametric(x1, y1, x2, y2)
-            #     elif self.clipping_method == 'cohen_sutherland':
-            #         clipped_coords = self.clip_cohen_sutherland(x1, y1, x2, y2)
-            #     else:
-            #         clipped_coords = (x1, y1, x2, y2)
-            #     if clipped_coords and isinstance(clipped_coords, tuple):  # Verifica se clipped_coords é uma tupla
-            #         obj.start_point = clipped_coords[:2]
-            #         obj.end_point = clipped_coords[2:]
-            #         self.draw_object(obj)
-            # else:
-            #     self.draw_object(obj)
 
         # Atualizar a lista de objetos
         object_names = "\n".join(self.display_file.objects.keys())
         self.object_list_label.config(text=object_names)
+        self.angle_vup = 0
 
     def pan(self, dx, dy):
-        # self.window[0] += dx
-        # self.window[1] += dy
-        # self.window[2] += dx
-        # self.window[3] += dy
         self.window.xmin += dx
         self.window.ymin += dy
         self.window.xmax += dx
