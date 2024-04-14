@@ -351,6 +351,44 @@ class GraphicsSystem2D:
             code |= 8
 
         return code
+    
+    def clip_polygon(self, vertices):
+        result = vertices
+
+        # Clip against each window edge
+        for i in range(len(self.window) // 2):
+            edge = [self.window[2 * i], self.window[2 * i + 1], self.window[(2 * i + 2) % len(self.window)], self.window[(2 * i + 3) % len(self.window)]]
+            new_result = []
+
+            # Clip against the current edge
+            S = result[-1]
+            for E in result:
+                if self.inside(E, edge):
+                    if not self.inside(S, edge):
+                        new_result.append(self.intersect(S, E, edge))
+                    new_result.append(E)
+                elif self.inside(S, edge):
+                    new_result.append(self.intersect(S, E, edge))
+                S = E
+            result = new_result
+
+        return result
+    
+    def inside(self, P, edge):
+        # Test if a point is inside a window edge
+        x1, y1, x2, y2 = edge
+        return (x2 - x1) * (P[1] - y1) > (y2 - y1) * (P[0] - x1)
+
+    def intersect(self, S, E, edge):
+        # Find the intersection point of a line segment and a window edge
+        x1, y1, x2, y2 = edge
+        x3, y3 = S
+        x4, y4 = E
+        denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+        if denom == 0:
+            return None  # Parallel lines
+        t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom
+        return (x3 + t * (x4 - x3), y3 + t * (y4 - y3))
 
     def import_object(self):
         file_path = self.entry_import_obj_name.get()
@@ -430,16 +468,18 @@ class GraphicsSystem2D:
 
     def draw_object(self, obj_type, coordinates, color='black'):
         if obj_type == 'point':
-            x, y = self.transform_to_viewport(*coordinates)  # Apenas um conjunto de coordenadas para o ponto
+            x, y = self.transform_to_viewport(*coordinates)  
             if self.clip_point(x, y):
-                self.canvas.create_oval(x, y, x + 2, y + 2, fill=color)  # Desenha um pequeno oval para representar o ponto
+                self.canvas.create_oval(x, y, x + 2, y + 2, fill=color)  
         elif obj_type == 'line':
-            x1, y1 = self.transform_to_viewport(*coordinates[:2])  # As coordenadas da reta estão no primeiro conjunto
-            x2, y2 = self.transform_to_viewport(*coordinates[2:])  # As coordenadas da reta estão no segundo conjunto
+            x1, y1 = self.transform_to_viewport(*coordinates[:2])  
+            x2, y2 = self.transform_to_viewport(*coordinates[2:])  
             self.canvas.create_line(x1, y1, x2, y2, fill=color)
         elif obj_type == 'wireframe':
             transformed_coords = [self.transform_to_viewport(*coord) for coord in coordinates]
-            self.draw_wireframe(transformed_coords)
+            clipped_coords = self.clip_polygon(transformed_coords)
+            if clipped_coords and len(clipped_coords) > 2:
+                self.draw_wireframe(clipped_coords)
 
 
     def clip_point(self, x, y):
@@ -496,7 +536,8 @@ class GraphicsSystem2D:
                 self.draw_object(obj_type, coordinates, color)  # Desenha o ponto diretamente
             else:
                 self.draw_object(obj_type, coordinates, color)
-
+        object_names = "\n".join(self.display_file.objects.keys())
+        self.object_list_label.config(text=object_names)
 
     def pan(self, dx, dy):
         self.window[0] += dx
@@ -583,7 +624,7 @@ root.title("2D Graphics System")
 display_file = DisplayFile2D()
 display_file.add_line(((-50, -50), (50, 50)))
 display_file.add_point((50, 90))
-#display_file.add_wireframe([(100, -100), (100, 100), (-100, 100), (-100, -100)])
+display_file.add_wireframe([(100, -100), (100, 100), (-100, 100), (-100, -100)])
 
 object_list = tk.Listbox(root)
 
