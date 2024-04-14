@@ -26,10 +26,10 @@ class DisplayFile2D:
         except ValueError:
             print("Invalid coordinates")
 
-    def add_wireframe(self, coordinates, color='black'):
+    def add_wireframe(self, coordinates, color='black', filled=False):
         try:
             name = f'Wireframe{self.counters["wireframe"] + 1}'
-            wireframe = Wireframe(coordinates, name, color)
+            wireframe = Wireframe(coordinates, name, color, filled)
             self.objects[name] = wireframe
             self.counters['wireframe'] += 1
         except ValueError:

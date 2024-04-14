@@ -14,5 +14,7 @@ class OBJDescriptor:
                     f.write(f'v {vertex[0]} {vertex[1]} 0.0\n')
                 for i in range(1, len(obj.point_list) + 1):
                     f.write(f'l {i} {i % len(obj.point_list) + 1}\n')
+                # Marca se o wireframe é preenchido ou não
+                f.write(f'# Filled: {obj.filled}\n')
             # Escrever a cor como um comentário
             f.write(f'# Color: {obj.color}\n')

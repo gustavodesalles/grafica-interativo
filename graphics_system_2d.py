@@ -98,6 +98,10 @@ class GraphicsSystem2D:
         self.c2.pack()
         self.c3.pack()
 
+        self.fill_var = tk.BooleanVar()
+        self.f1 = tk.Checkbutton(self.master, text="Fill wireframe", variable=self.fill_var)
+        self.f1.pack()
+
         self.button_add_object = tk.Button(self.master, text="Add Object", command=self.add_object)
         self.button_add_object.pack(side=tk.TOP)
 
@@ -314,23 +318,40 @@ class GraphicsSystem2D:
                 # obj_name = f'Imported_Object_{len(self.display_file.objects) + 1}'
 
                 # Check for color information
-                color = lines[-1].split(":")[1].strip()
-                if color in ['red', 'green', 'blue', 'black']:
-                    print(f"Cor do objeto: {color}")
+                color_index = self.get_index_with_substring(lines, '# Color:')
+                if color_index != -1:
+                    color = lines[color_index].split(":")[1].strip()
+                    if color in ['red', 'green', 'blue', 'black']:
+                        print(f"Cor do objeto: {color}")
+                    else:
+                        print("Nenhuma informação de cor encontrada.")
+                        color = 'black'
                 else:
                     print("Nenhuma informação de cor encontrada.")
                     color = 'black'
+
+                filled_index = self.get_index_with_substring(lines, '# Filled:')
+                if filled_index != -1:
+                    filled = eval(lines[filled_index].split(":")[1].strip())
+                else:
+                    filled = False
 
                 if len(vertices) == 1:
                     self.display_file.add_point(vertices[0], color)
                 elif len(vertices) == 2:
                     self.display_file.add_line(vertices, color)
                 elif len(vertices) > 0:
-                    self.display_file.add_wireframe(vertices, color)
+                    self.display_file.add_wireframe(vertices, color, filled)
                 self.draw_display_file()
                 print(f"Objeto importado de '{file_path}'.")
         except FileNotFoundError:
             print(f"Arquivo '{file_path}' não encontrado.")
+
+    def get_index_with_substring(self, lista, substring):
+        for i, s in enumerate(lista):
+            if substring in s:
+                return i
+        return -1
 
     def export_object(self):
         obj_name = self.entry_export_obj_name.get()
@@ -386,17 +407,25 @@ class GraphicsSystem2D:
 
     def apply_transformation(self, obj, transformation_matrix):
         if obj.type == 'Point':
-            new_coordinates = np.dot(transformation_matrix, np.array([obj.coordinate_x_scn, obj.coordinate_y_scn, 1]))
-            obj.coordinate_x_scn = new_coordinates[0]
-            obj.coordinate_y_scn = new_coordinates[1]
+            new_coordinates = np.dot(transformation_matrix, np.array([obj.coordinate_x, obj.coordinate_y, 1]))
+            obj.coordinate_x = new_coordinates[0]
+            obj.coordinate_y = new_coordinates[1]
+            new_coordinates_scn = np.dot(transformation_matrix, np.array([obj.coordinate_x_scn, obj.coordinate_y_scn, 1]))
+            obj.coordinate_x_scn = new_coordinates_scn[0]
+            obj.coordinate_y_scn = new_coordinates_scn[1]
         elif obj.type == 'Line':
+            obj.start_point = np.dot(transformation_matrix, np.array([obj.start_point[0], obj.start_point[1], 1]))
+            obj.end_point = np.dot(transformation_matrix, np.array([obj.end_point[0], obj.end_point[1], 1]))
             obj.start_point_scn = np.dot(transformation_matrix, np.array([obj.start_point_scn[0], obj.start_point_scn[1], 1]))
             obj.end_point_scn = np.dot(transformation_matrix, np.array([obj.end_point_scn[0], obj.end_point_scn[1], 1]))
         elif obj.type == 'Wireframe':
             for i in range(len(obj.point_list_scn)):
-                point = obj.point_list_scn[i]
+                point = obj.point_list[i]
                 point_vector = np.dot(transformation_matrix, np.array([point[0], point[1], 1]))
                 obj.point_list[i] = (point_vector[0], point_vector[1])
+                point_scn = obj.point_list_scn[i]
+                point_vector_scn = np.dot(transformation_matrix, np.array([point_scn[0], point_scn[1], 1]))
+                obj.point_list_scn[i] = (point_vector_scn[0], point_vector_scn[1])
 
     def draw_object(self, obj):
         if obj.type == 'Point':
@@ -415,12 +444,12 @@ class GraphicsSystem2D:
             transformed_coords = []
             for i in range(len(obj.point_list_scn)):
                 point = obj.point_list_scn[i]
-                obj.point_list_scn[i][0], obj.point_list_scn[i][1] = self.rotate_align_vup(obj.point_list_scn[i][0], obj.point_list_scn[i][1])
+                obj.point_list_scn[i] = self.rotate_align_vup(obj.point_list_scn[i][0], obj.point_list_scn[i][1])
                 x, y = self.transform_to_viewport(point[0], point[1])
                 transformed_coords.append((x, y))
-            self.draw_wireframe(transformed_coords, obj.color)
+            self.draw_wireframe(transformed_coords, obj.color, obj.filled)
 
-    def draw_wireframe(self, coordinates, color):
+    def draw_wireframe(self, coordinates, color, filled):
         # Desenhar as linhas do polígono
         for i in range(len(coordinates)):
             x1, y1 = coordinates[i]
@@ -428,20 +457,21 @@ class GraphicsSystem2D:
             self.canvas.create_line(x1, y1, x2, y2, fill=color)
 
         # Preencher o interior do polígono manualmente
-        scanline_y = min(y for x, y in coordinates)
-        while scanline_y <= max(y for x, y in coordinates):
-            intersections = []
-            for i in range(len(coordinates)):
-                x1, y1 = coordinates[i]
-                x2, y2 = coordinates[(i + 1) % len(coordinates)]
-                if y1 != y2 and (y1 <= scanline_y <= y2 or y2 <= scanline_y <= y1):
-                    x_intersect = x1 + (scanline_y - y1) * (x2 - x1) / (y2 - y1)
-                    intersections.append(x_intersect)
-            intersections.sort()
-            for i in range(0, len(intersections), 2):
-                self.canvas.create_line(intersections[i], scanline_y, intersections[i + 1], scanline_y,
-                                        fill='black')
-            scanline_y += 1
+        if filled:
+            scanline_y = min(y for x, y in coordinates)
+            while scanline_y <= max(y for x, y in coordinates):
+                intersections = []
+                for i in range(len(coordinates)):
+                    x1, y1 = coordinates[i]
+                    x2, y2 = coordinates[(i + 1) % len(coordinates)]
+                    if y1 != y2 and (y1 <= scanline_y <= y2 or y2 <= scanline_y <= y1):
+                        x_intersect = x1 + (scanline_y - y1) * (x2 - x1) / (y2 - y1)
+                        intersections.append(x_intersect)
+                intersections.sort()
+                for i in range(0, len(intersections), 2):
+                    self.canvas.create_line(intersections[i], scanline_y, intersections[i + 1], scanline_y,
+                                            fill='black')
+                scanline_y += 1
 
     def rotate_vup(self):
         angle = float(self.entry_rotation.get())
@@ -499,6 +529,7 @@ class GraphicsSystem2D:
     def add_object(self):
         coordinates_str = self.entry_coordinates.get()
         object_color = self.color_string.get()
+        filled = self.fill_var.get()
         coordinates = coordinates_str.split(",")
         coordinates_head = coordinates.pop(0)
         coordinates = list(map(lambda x: int(x), coordinates))
@@ -509,7 +540,7 @@ class GraphicsSystem2D:
         elif coordinates_head.upper() == "LINE":
             self.display_file.add_line(coordinates, object_color)
         elif coordinates_head.upper() == "WIREFRAME":
-            self.display_file.add_wireframe(coordinates, object_color)
+            self.display_file.add_wireframe(coordinates, object_color, filled)
         else:
             print("Unable to add object")
         self.draw_display_file()
