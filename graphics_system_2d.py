@@ -307,21 +307,21 @@ class GraphicsSystem2D:
 
     def clip_polygon(self, polygon):
         output_list = polygon.point_list_scn.copy()
-        edges = [
-            (self.window.xmin, self.window.ymin, self.window.xmin, self.window.ymax),  # esquerda
-            (self.window.xmin, self.window.ymin, self.window.xmax, self.window.ymin),  # fundo
-            (self.window.xmax, self.window.ymin, self.window.xmax, self.window.ymax),  # direita
-            (self.window.xmin, self.window.ymax, self.window.xmax, self.window.ymax)   # topo
+        edge_points = [
+            (self.window.xmin, self.window.ymin),
+            (self.window.xmax, self.window.ymin),
+            (self.window.xmax, self.window.ymax),
+            (self.window.xmin, self.window.ymax)
         ]
+        edges = [(edge_points[i], edge_points[(i + 1) % 4]) for i in range(len(edge_points))]
 
         # Clip against each window edge
         for edge in edges:
             input_list = output_list
             output_list = []
-            for i in range(len(input_list)):
-                p1 = input_list[i]
-                p2 = input_list[(i + 1) % len(input_list)]
+            p1 = input_list[-1]
 
+            for p2 in input_list:
                 if self.inside(p2, edge):
                     if not self.inside(p1, edge):
                         intersect = self.intersect(p1, p2, edge)
@@ -332,13 +332,15 @@ class GraphicsSystem2D:
                     intersect = self.intersect(p1, p2, edge)
                     if intersect:
                         output_list.append(intersect)
+                p1 = p2
 
         return output_list
 
     def inside(self, point, edge):
         # Test if a point is inside a window edge
         x, y = point
-        x1, y1, x2, y2 = edge
+        x1, y1 = edge[0]
+        x2, y2 = edge[1]
 
         return (x2 - x1) * (y - y1) > (y2 - y1) * (x - x1)
 
@@ -346,7 +348,8 @@ class GraphicsSystem2D:
         # Find the intersection point of a line segment and a window edge
         x1, y1 = p1
         x2, y2 = p2
-        x3, y3, x4, y4 = edge
+        x3, y3 = edge[0]
+        x4, y4 = edge[1]
 
         denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
         if denom == 0:
