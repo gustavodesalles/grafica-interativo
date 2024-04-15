@@ -305,6 +305,62 @@ class GraphicsSystem2D:
 
         return code
 
+    def clip_polygon(self, polygon):
+        output_list = polygon.point_list_scn.copy()
+        edges = [
+            (self.window.xmin, self.window.ymin, self.window.xmin, self.window.ymax),  # esquerda
+            (self.window.xmin, self.window.ymin, self.window.xmax, self.window.ymin),  # fundo
+            (self.window.xmax, self.window.ymin, self.window.xmax, self.window.ymax),  # direita
+            (self.window.xmin, self.window.ymax, self.window.xmax, self.window.ymax)   # topo
+        ]
+
+        # Clip against each window edge
+        for edge in edges:
+            input_list = output_list
+            output_list = []
+            for i in range(len(input_list)):
+                p1 = input_list[i]
+                p2 = input_list[(i + 1) % len(input_list)]
+
+                if self.inside(p2, edge):
+                    if not self.inside(p1, edge):
+                        intersect = self.intersect(p1, p2, edge)
+                        if intersect:
+                            output_list.append(intersect)
+                    output_list.append(p2)
+                elif self.inside(p1, edge):
+                    intersect = self.intersect(p1, p2, edge)
+                    if intersect:
+                        output_list.append(intersect)
+
+        return output_list
+
+    def inside(self, point, edge):
+        # Test if a point is inside a window edge
+        x, y = point
+        x1, y1, x2, y2 = edge
+
+        return (x2 - x1) * (y - y1) > (y2 - y1) * (x - x1)
+
+    def intersect(self, p1, p2, edge):
+        # Find the intersection point of a line segment and a window edge
+        x1, y1 = p1
+        x2, y2 = p2
+        x3, y3, x4, y4 = edge
+
+        denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+        if denom == 0:
+            return None  # Parallel lines
+        else:
+            t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom
+            if 0 <= t <= 1:
+                # Intersection point lies within the line segment
+                x = x1 + t * (x2 - x1)
+                y = y1 + t * (y2 - y1)
+                return x, y
+            else:
+                return None  # Intersection point lies outside the line segment
+
     def import_object(self):
         file_path = self.entry_import_obj_name.get()
         try:
@@ -410,13 +466,15 @@ class GraphicsSystem2D:
             new_coordinates = np.dot(transformation_matrix, np.array([obj.coordinate_x, obj.coordinate_y, 1]))
             obj.coordinate_x = new_coordinates[0]
             obj.coordinate_y = new_coordinates[1]
-            new_coordinates_scn = np.dot(transformation_matrix, np.array([obj.coordinate_x_scn, obj.coordinate_y_scn, 1]))
+            new_coordinates_scn = np.dot(transformation_matrix,
+                                         np.array([obj.coordinate_x_scn, obj.coordinate_y_scn, 1]))
             obj.coordinate_x_scn = new_coordinates_scn[0]
             obj.coordinate_y_scn = new_coordinates_scn[1]
         elif obj.type == 'Line':
             obj.start_point = np.dot(transformation_matrix, np.array([obj.start_point[0], obj.start_point[1], 1]))
             obj.end_point = np.dot(transformation_matrix, np.array([obj.end_point[0], obj.end_point[1], 1]))
-            obj.start_point_scn = np.dot(transformation_matrix, np.array([obj.start_point_scn[0], obj.start_point_scn[1], 1]))
+            obj.start_point_scn = np.dot(transformation_matrix,
+                                         np.array([obj.start_point_scn[0], obj.start_point_scn[1], 1]))
             obj.end_point_scn = np.dot(transformation_matrix, np.array([obj.end_point_scn[0], obj.end_point_scn[1], 1]))
         elif obj.type == 'Wireframe':
             for i in range(len(obj.point_list_scn)):
@@ -429,22 +487,28 @@ class GraphicsSystem2D:
 
     def draw_object(self, obj):
         if obj.type == 'Point':
-            obj.coordinate_x_scn, obj.coordinate_y_scn = self.rotate_align_vup(obj.coordinate_x_scn, obj.coordinate_y_scn)
+            obj.coordinate_x_scn, obj.coordinate_y_scn = self.rotate_align_vup(obj.coordinate_x_scn,
+                                                                               obj.coordinate_y_scn)
             x, y = self.transform_to_viewport(obj.coordinate_x_scn, obj.coordinate_y_scn)
             if self.clip_point(x, y):
                 self.canvas.create_oval(x, y, x + 2, y + 2, fill=obj.color)
         elif obj.type == 'Line':
-            obj.start_point_scn[0], obj.start_point_scn[1] = self.rotate_align_vup(obj.start_point_scn[0], obj.start_point_scn[1])
-            obj.end_point_scn[0], obj.end_point_scn[1] = self.rotate_align_vup(obj.end_point_scn[0], obj.end_point_scn[1])
-            x1_clip, y1_clip, x2_clip, y2_clip = self.clip_line(obj.start_point_scn[0], obj.start_point_scn[1], obj.end_point_scn[0], obj.end_point_scn[1])
+            obj.start_point_scn[0], obj.start_point_scn[1] = self.rotate_align_vup(obj.start_point_scn[0],
+                                                                                   obj.start_point_scn[1])
+            obj.end_point_scn[0], obj.end_point_scn[1] = self.rotate_align_vup(obj.end_point_scn[0],
+                                                                               obj.end_point_scn[1])
+            x1_clip, y1_clip, x2_clip, y2_clip = self.clip_line(obj.start_point_scn[0], obj.start_point_scn[1],
+                                                                obj.end_point_scn[0], obj.end_point_scn[1])
             x1, y1 = self.transform_to_viewport(x1_clip, y1_clip)
             x2, y2 = self.transform_to_viewport(x2_clip, y2_clip)
             self.canvas.create_line(x1, y1, x2, y2, fill=obj.color)
         elif obj.type == 'Wireframe':
             transformed_coords = []
             for i in range(len(obj.point_list_scn)):
-                point = obj.point_list_scn[i]
                 obj.point_list_scn[i] = self.rotate_align_vup(obj.point_list_scn[i][0], obj.point_list_scn[i][1])
+            polygon = self.clip_polygon(obj)
+            for i in range(len(polygon)):
+                point = polygon[i]
                 x, y = self.transform_to_viewport(point[0], point[1])
                 transformed_coords.append((x, y))
             self.draw_wireframe(transformed_coords, obj.color, obj.filled)

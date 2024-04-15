@@ -11,7 +11,7 @@ root.geometry("1200x900")
 display_file = DisplayFile2D()
 display_file.add_line(((-50, -50), (50, 50)), 'red')
 display_file.add_point((0, 0))
-# display_file.add_wireframe([(100, -100), (100, 100), (-100, 100), (-100, -100)], 'blue')
+display_file.add_wireframe([(100, -100), (100, 100), (-100, 100), (-100, -100)], 'blue')
 
 object_list = tk.Listbox(root)
 
