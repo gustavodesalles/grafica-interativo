@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import ttk
 
 import numpy as np
 
@@ -84,6 +85,12 @@ class GraphicsSystem2D:
         self.button_remove_object.pack()
 
     def setup_add_object_interface(self):
+        self.object_type = tk.StringVar()
+        self.object_types_combobox = ttk.Combobox(self.master, state="readonly", textvariable=self.object_type,
+                                                  values=['Point', 'Line', 'Wireframe'])
+        self.object_types_combobox.current(0)
+        self.object_types_combobox.pack()
+
         self.label_coordinates = tk.Label(self.master, text="Coordinates:")
         self.label_coordinates.pack(side=tk.TOP)
 
@@ -598,7 +605,8 @@ class GraphicsSystem2D:
         object_color = self.color_string.get()
         filled = self.fill_var.get()
         coordinates = coordinates_str.split(",")
-        coordinates_head = coordinates.pop(0)
+        # coordinates_head = coordinates.pop(0)
+        coordinates_head = self.object_type.get()
         coordinates = list(map(lambda x: int(x), coordinates))
         coordinates = [(coordinates[i], coordinates[i + 1]) for i in range(0, len(coordinates), 2)]
 
