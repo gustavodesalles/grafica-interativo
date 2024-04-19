@@ -4,7 +4,7 @@ import numpy as np
 class DisplayFile2D:
     def __init__(self):
         self.objects = {}  # Dicionário para armazenar objetos
-        self.counters = {'point': 0, 'line': 0, 'wireframe': 0}  # Contadores para nomeação dos objetos
+        self.counters = {'point': 0, 'line': 0, 'wireframe': 0, 'curve': 0}  # Contadores para nomeação dos objetos
 
     def add_point(self, coordinates, color='black'):
         name = f'Ponto{self.counters["point"] + 1}'
@@ -20,6 +20,11 @@ class DisplayFile2D:
         name = f'Wireframe{self.counters["wireframe"] + 1}'
         self.objects[name] = ('wireframe', coordinates, color)
         self.counters['wireframe'] += 1
+
+    def add_curve(self, points, color='black'):
+        name = f'Curva{self.counters["curve"] + 1}'
+        self.objects[name] = ('curve', points, color)
+        self.counters['curve'] += 1    
 
     def remove_object(self, name):
         if name in self.objects:
@@ -170,8 +175,15 @@ class GraphicsSystem2D:
         self.entry_coordinates = tk.Entry(root)
         self.entry_coordinates.pack(side=tk.TOP)
 
+        self.label_curve_points = tk.Label(root, text="Hermite Curve Points:")
+        self.label_curve_points.pack(side=tk.TOP)
+
+        self.entry_curve_points = tk.Entry(root)  # Adicione uma entrada para os pontos de controle da curva de Hermite
+        self.entry_curve_points.pack(side=tk.TOP)
+
         self.button_add_object = tk.Button(root, text="Add Object", command=self.add_object)
         self.button_add_object.pack(side=tk.TOP)
+
 
     def setup_transformation_interface(self):
         self.label_transformation = tk.Label(self.master, text="Transformation")
@@ -351,44 +363,6 @@ class GraphicsSystem2D:
             code |= 8
 
         return code
-    
-    def clip_polygon(self, vertices):
-        result = vertices
-
-        # Clip against each window edge
-        for i in range(len(self.window) // 2):
-            edge = [self.window[2 * i], self.window[2 * i + 1], self.window[(2 * i + 2) % len(self.window)], self.window[(2 * i + 3) % len(self.window)]]
-            new_result = []
-
-            # Clip against the current edge
-            S = result[-1]
-            for E in result:
-                if self.inside(E, edge):
-                    if not self.inside(S, edge):
-                        new_result.append(self.intersect(S, E, edge))
-                    new_result.append(E)
-                elif self.inside(S, edge):
-                    new_result.append(self.intersect(S, E, edge))
-                S = E
-            result = new_result
-
-        return result
-    
-    def inside(self, P, edge):
-        # Test if a point is inside a window edge
-        x1, y1, x2, y2 = edge
-        return (x2 - x1) * (P[1] - y1) > (y2 - y1) * (P[0] - x1)
-
-    def intersect(self, S, E, edge):
-        # Find the intersection point of a line segment and a window edge
-        x1, y1, x2, y2 = edge
-        x3, y3 = S
-        x4, y4 = E
-        denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
-        if denom == 0:
-            return None  # Parallel lines
-        t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom
-        return (x3 + t * (x4 - x3), y3 + t * (y4 - y3))
 
     def import_object(self):
         file_path = self.entry_import_obj_name.get()
@@ -468,18 +442,16 @@ class GraphicsSystem2D:
 
     def draw_object(self, obj_type, coordinates, color='black'):
         if obj_type == 'point':
-            x, y = self.transform_to_viewport(*coordinates)  
+            x, y = self.transform_to_viewport(*coordinates)  # Apenas um conjunto de coordenadas para o ponto
             if self.clip_point(x, y):
-                self.canvas.create_oval(x, y, x + 2, y + 2, fill=color)  
+                self.canvas.create_oval(x, y, x + 2, y + 2, fill=color)  # Desenha um pequeno oval para representar o ponto
         elif obj_type == 'line':
-            x1, y1 = self.transform_to_viewport(*coordinates[:2])  
-            x2, y2 = self.transform_to_viewport(*coordinates[2:])  
+            x1, y1 = self.transform_to_viewport(*coordinates[:2])  # As coordenadas da reta estão no primeiro conjunto
+            x2, y2 = self.transform_to_viewport(*coordinates[2:])  # As coordenadas da reta estão no segundo conjunto
             self.canvas.create_line(x1, y1, x2, y2, fill=color)
         elif obj_type == 'wireframe':
             transformed_coords = [self.transform_to_viewport(*coord) for coord in coordinates]
-            clipped_coords = self.clip_polygon(transformed_coords)
-            if clipped_coords and len(clipped_coords) > 2:
-                self.draw_wireframe(clipped_coords)
+            self.draw_wireframe(transformed_coords)
 
 
     def clip_point(self, x, y):
@@ -514,12 +486,11 @@ class GraphicsSystem2D:
         try:
             self.angle_vup = float(self.entry_rotation.get())
         except ValueError:
-            self.angle_vup = 0  # Definir como 0 se a entrada não for válida
-        
-        # Redesenha as bordas
+            self.angle_vup = 0
+
         self.viewport_border = self.canvas.create_rectangle(*self.viewport, outline='red', dash=(5, 5))
         self.window_border = self.canvas.create_rectangle(*self.window, outline='blue')
-        
+
         for obj_name, (obj_type, coordinates, color) in self.display_file.objects.items():
             if obj_type == 'line':
                 x1, y1 = coordinates[0]
@@ -530,14 +501,34 @@ class GraphicsSystem2D:
                     clipped_coords = self.clip_cohen_sutherland(x1, y1, x2, y2)
                 else:
                     clipped_coords = (x1, y1, x2, y2)
-                if clipped_coords and isinstance(clipped_coords, tuple):  # Verifica se clipped_coords é uma tupla
+                if clipped_coords and isinstance(clipped_coords, tuple):
                     self.draw_object(obj_type, clipped_coords, color)
             elif obj_type == 'point':
-                self.draw_object(obj_type, coordinates, color)  # Desenha o ponto diretamente
-            else:
                 self.draw_object(obj_type, coordinates, color)
-        object_names = "\n".join(self.display_file.objects.keys())
-        self.object_list_label.config(text=object_names)
+            elif obj_type == 'curve':  # Adicione um caso para a curva de Hermite
+                self.draw_hermite_curve(coordinates, color)
+
+    def draw_hermite_curve(self, control_points, color):
+        num_segments = 100  # Número de segmentos para desenhar a curva
+        t_values = np.linspace(0, 1, num_segments)
+
+        for i in range(len(control_points) - 1):
+            p0, m0, p1, m1 = control_points[i]  # Extrair os pontos de controle e vetores de tangente
+
+            for t in t_values:
+                t2 = t * t
+                t3 = t2 * t
+                h1 = 2 * t3 - 3 * t2 + 1
+                h2 = -2 * t3 + 3 * t2
+                h3 = t3 - 2 * t2 + t
+                h4 = t3 - t2
+
+                x = h1 * p0[0] + h2 * p1[0] + h3 * m0[0] + h4 * m1[0]
+                y = h1 * p0[1] + h2 * p1[1] + h3 * m0[1] + h4 * m1[1]
+
+                x, y = self.transform_to_viewport(x, y)  # Transformar as coordenadas para a viewport
+                if self.clip_point(x, y):  # Verificar se o ponto está dentro da viewport
+                    self.canvas.create_oval(x, y, x + 2, y + 2, fill=color)  # Desenhar o ponto na viewport
 
     def pan(self, dx, dy):
         self.window[0] += dx
@@ -579,14 +570,19 @@ class GraphicsSystem2D:
 
     def add_object(self):
         coordinates_str = self.entry_coordinates.get()
+        curve_points_str = self.entry_curve_points.get()  # Obtenha os pontos de controle da curva de Hermite
         coordinates = eval(coordinates_str)
+        curve_points = eval(curve_points_str)  # Converta a string de pontos de controle para uma lista de tuplas
         if len(coordinates) == 1:
             self.display_file.add_point(coordinates)
         elif len(coordinates) == 2:
             self.display_file.add_line(coordinates)
         elif len(coordinates) > 2:
             self.display_file.add_wireframe(coordinates)
+        if len(curve_points) == 4:  # Verifique se há pontos suficientes para a curva de Hermite
+            self.display_file.add_curve(curve_points)
         self.draw_display_file()
+
 
 
     def rotate_vup(self):
@@ -624,7 +620,9 @@ root.title("2D Graphics System")
 display_file = DisplayFile2D()
 display_file.add_line(((-50, -50), (50, 50)))
 display_file.add_point((50, 90))
-display_file.add_wireframe([(100, -100), (100, 100), (-100, 100), (-100, -100)])
+#display_file.add_wireframe([(100, -100), (100, 100), (-100, 100), (-100, -100)])4
+control_points = [((-50, -50), (100, 0), (100, 0), (100, 100)), ((-50, 50), (0, 100), (0, 100), (-100, 100))]
+display_file.add_curve(control_points, 'red')
 
 object_list = tk.Listbox(root)
 
