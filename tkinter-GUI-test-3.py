@@ -1,5 +1,6 @@
 import tkinter as tk
 import numpy as np
+import ast
 
 class DisplayFile2D:
     def __init__(self):
@@ -512,8 +513,12 @@ class GraphicsSystem2D:
         num_segments = 100  # Número de segmentos para desenhar a curva
         t_values = np.linspace(0, 1, num_segments)
 
-        for i in range(len(control_points) - 1):
-            p0, m0, p1, m1 = control_points[i]  # Extrair os pontos de controle e vetores de tangente
+        print("CONTROL")
+        print(control_points)
+
+        for i in range(1,len(control_points) - 2):
+            #p0, m0, p1, m1 = control_points[i]  # Extrair os pontos de controle e vetores de tangente
+
 
             for t in t_values:
                 t2 = t * t
@@ -569,20 +574,53 @@ class GraphicsSystem2D:
         self.draw_display_file()
 
     def add_object(self):
-        coordinates_str = self.entry_coordinates.get()
-        curve_points_str = self.entry_curve_points.get()  # Obtenha os pontos de controle da curva de Hermite
-        coordinates = eval(coordinates_str)
-        curve_points = eval(curve_points_str)  # Converta a string de pontos de controle para uma lista de tuplas
-        if len(coordinates) == 1:
-            self.display_file.add_point(coordinates)
-        elif len(coordinates) == 2:
-            self.display_file.add_line(coordinates)
-        elif len(coordinates) > 2:
-            self.display_file.add_wireframe(coordinates)
-        if len(curve_points) == 4:  # Verifique se há pontos suficientes para a curva de Hermite
-            self.display_file.add_curve(curve_points)
-        self.draw_display_file()
+        coordinates_str = self.entry_curve_points.get()
+        object_type = self.get_object_type(coordinates_str)
 
+        print(object_type)
+        
+        if object_type == 'hermite_curve':
+            coordinates = self.parse_hermite_curve(coordinates_str)
+        else:
+            coordinates = self.parse_coordinates(coordinates_str)
+
+        print(coordinates)
+
+        if coordinates:
+            if (object_type == "hermite_curve"):
+                self.display_file.add_curve(coordinates)
+            elif len(coordinates) == 1:
+                self.display_file.add_point(coordinates)
+            elif len(coordinates) == 2:
+                self.display_file.add_line(coordinates)
+            elif len(coordinates) > 2:
+                self.display_file.add_wireframe(coordinates)
+            self.draw_display_file()
+        else:
+            print("Entrada de coordenadas inválida.")
+
+    def get_object_type(self, coordinates_str):
+        if coordinates_str.startswith("[("):  # Verifica se a entrada parece ser para uma curva de Hermite
+            return 'hermite_curve'
+        else:
+            return 'other'  # Assume que a entrada é para outro tipo de objeto
+
+    def parse_hermite_curve(self, coordinates_str):
+        coordinates = ast.literal_eval(coordinates_str)
+        coordinates_result = []
+        for group in coordinates:
+            for coord in group:
+                coordinates_result.append(coord)
+        return coordinates_result
+
+
+    def parse_coordinates(self, coordinates_str):
+        try:
+            coordinates = eval(coordinates_str)
+        except Exception as e:
+            print("Erro ao analisar as coordenadas:", e)
+            return None
+        return coordinates
 
 
     def rotate_vup(self):
@@ -622,7 +660,7 @@ display_file.add_line(((-50, -50), (50, 50)))
 display_file.add_point((50, 90))
 #display_file.add_wireframe([(100, -100), (100, 100), (-100, 100), (-100, -100)])4
 control_points = [((-50, -50), (100, 0), (100, 0), (100, 100)), ((-50, 50), (0, 100), (0, 100), (-100, 100))]
-display_file.add_curve(control_points, 'red')
+#display_file.add_curve(control_points, 'red')
 
 object_list = tk.Listbox(root)
 
