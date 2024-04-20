@@ -381,7 +381,12 @@ class GraphicsSystem2D:
                     if line.startswith('v'):
                         _, x, y, _ = line.split()
                         vertices.append((float(x), float(y)))
-                # obj_name = f'Imported_Object_{len(self.display_file.objects) + 1}'
+
+                type_index = self.get_index_with_substring(lines, '# Type:')
+                if type_index != -1:
+                    type = lines[type_index].split(":")[1].strip()
+                else:
+                    raise ValueError
 
                 # Check for color information
                 color_index = self.get_index_with_substring(lines, '# Color:')
@@ -402,16 +407,20 @@ class GraphicsSystem2D:
                 else:
                     filled = False
 
-                if len(vertices) == 1:
+                if type.upper() == 'POINT':
                     self.display_file.add_point(vertices[0], color)
-                elif len(vertices) == 2:
+                elif type.upper() == 'LINE':
                     self.display_file.add_line(vertices, color)
-                elif len(vertices) > 0:
+                elif type.upper() == 'WIREFRAME':
                     self.display_file.add_wireframe(vertices, color, filled)
+                elif type.upper() == 'CURVE':
+                    self.display_file.add_curve(vertices, color)
                 self.draw_display_file()
                 print(f"Objeto importado de '{file_path}'.")
         except FileNotFoundError:
             print(f"Arquivo '{file_path}' não encontrado.")
+        except ValueError:
+            print(f"Arquivo '{file_path}' não possui tipo.")
 
     def get_index_with_substring(self, lista, substring):
         for i, s in enumerate(lista):
@@ -486,7 +495,7 @@ class GraphicsSystem2D:
             obj.start_point_scn = np.dot(transformation_matrix,
                                          np.array([obj.start_point_scn[0], obj.start_point_scn[1], 1]))
             obj.end_point_scn = np.dot(transformation_matrix, np.array([obj.end_point_scn[0], obj.end_point_scn[1], 1]))
-        elif obj.type == 'Wireframe':
+        elif obj.type == 'Wireframe' or obj.type == 'Curve':
             for i in range(len(obj.point_list_scn)):
                 point = obj.point_list[i]
                 point_vector = np.dot(transformation_matrix, np.array([point[0], point[1], 1]))
@@ -522,6 +531,16 @@ class GraphicsSystem2D:
                 x, y = self.transform_to_viewport(point[0], point[1])
                 transformed_coords.append((x, y))
             self.draw_wireframe(transformed_coords, obj.color, obj.filled)
+        elif obj.type == 'Curve':
+            transformed_coords = []
+            for i in range(len(obj.point_list_scn)):
+                obj.point_list_scn[i] = self.rotate_align_vup(obj.point_list_scn[i][0], obj.point_list_scn[i][1])
+                # TODO: implementar método de clipping para curva
+            for i in range(len(obj.point_list_scn)):
+                x, y = obj.point_list_scn[i]
+                # x, y = self.transform_to_viewport(point[0], point[1])
+                transformed_coords.append((x, y))
+            self.draw_hermite_curve(transformed_coords, obj.color)
 
     def draw_wireframe(self, coordinates, color, filled):
         # Desenhar as linhas do polígono
@@ -546,6 +565,28 @@ class GraphicsSystem2D:
                     self.canvas.create_line(intersections[i], scanline_y, intersections[i + 1], scanline_y,
                                             fill='black')
                 scanline_y += 1
+
+    def draw_hermite_curve(self, control_points, color):
+        num_segments = 100  # Número de segmentos para desenhar a curva
+        t_values = np.linspace(0, 1, num_segments)
+
+        for i in range(1, len(control_points) - 3, 3):
+            p0, m0, m1, p1 = control_points[i:i+4]  # Extrair os pontos de controle e vetores de tangente
+
+            for t in t_values:
+                t2 = t * t
+                t3 = t2 * t
+                h1 = 2 * t3 - 3 * t2 + 1
+                h2 = -2 * t3 + 3 * t2
+                h3 = t3 - 2 * t2 + t
+                h4 = t3 - t2
+
+                x = h1 * p0[0] + h2 * p1[0] + h3 * m0[0] + h4 * m1[0]
+                y = h1 * p0[1] + h2 * p1[1] + h3 * m0[1] + h4 * m1[1]
+
+                x, y = self.transform_to_viewport(x, y)  # Transformar as coordenadas para a viewport
+                if self.clip_point(x, y):  # Verificar se o ponto está dentro da viewport
+                    self.canvas.create_oval(x, y, x + 2, y + 2, fill=color)  # Desenhar o ponto na viewport
 
     def rotate_vup(self):
         angle = float(self.entry_rotation.get())
@@ -616,6 +657,8 @@ class GraphicsSystem2D:
             self.display_file.add_line(coordinates, object_color)
         elif coordinates_head.upper() == "WIREFRAME":
             self.display_file.add_wireframe(coordinates, object_color, filled)
+        elif coordinates_head.upper() == "CURVE":
+            self.display_file.add_curve(coordinates, object_color)
         else:
             print("Unable to add object")
         self.draw_display_file()
@@ -630,7 +673,7 @@ class GraphicsSystem2D:
             return obj.coordinate_x, obj.coordinate_y
         elif obj.type == "Line":
             return (obj.start_point[0] + obj.end_point[0]) / 2, (obj.start_point[1] + obj.end_point[1]) / 2
-        elif obj.type == "Wireframe":
+        elif obj.type == "Wireframe" or obj.type == "Curve":
             center_x = sum([p[0] for p in obj.point_list]) / len(obj.point_list)
             center_y = sum([p[1] for p in obj.point_list]) / len(obj.point_list)
             return center_x, center_y
