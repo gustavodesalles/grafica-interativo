@@ -516,8 +516,8 @@ class GraphicsSystem2D:
         print("CONTROL")
         print(control_points)
 
-        for i in range(1,len(control_points) - 2):
-            #p0, m0, p1, m1 = control_points[i]  # Extrair os pontos de controle e vetores de tangente
+        for i in range(1,len(control_points) - 3, 3):
+            p0, m0, m1, p1 = control_points[i:i+4]  # Extrair os pontos de controle e vetores de tangente
 
 
             for t in t_values:
@@ -659,7 +659,7 @@ display_file = DisplayFile2D()
 display_file.add_line(((-50, -50), (50, 50)))
 display_file.add_point((50, 90))
 #display_file.add_wireframe([(100, -100), (100, 100), (-100, 100), (-100, -100)])4
-control_points = [((-50, -50), (100, 0), (100, 0), (100, 100)), ((-50, 50), (0, 100), (0, 100), (-100, 100))]
+# control_points = [((-50, -50), (100, 0), (100, 0), (100, 100)), ((-50, 50), (0, 100), (0, 100), (-100, 100))]
 #display_file.add_curve(control_points, 'red')
 
 object_list = tk.Listbox(root)
