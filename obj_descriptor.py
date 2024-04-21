@@ -5,7 +5,7 @@ class OBJDescriptor:
             f.write(f'g {obj.name}\n')
             if obj.type == 'Point':
                 f.write(f'v {obj.coordinate_x} {obj.coordinate_y} 0.0\n')
-            if obj.type == 'Line':
+            elif obj.type == 'Line':
                 f.write(f'v {obj.start_point[0]} {obj.start_point[1]} 0.0\n')
                 f.write(f'v {obj.end_point[0]} {obj.end_point[1]} 0.0\n')
                 f.write(f'l {1} {2}\n')
