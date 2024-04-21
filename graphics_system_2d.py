@@ -87,7 +87,7 @@ class GraphicsSystem2D:
     def setup_add_object_interface(self):
         self.object_type = tk.StringVar()
         self.object_types_combobox = ttk.Combobox(self.master, state="readonly", textvariable=self.object_type,
-                                                  values=['Point', 'Line', 'Wireframe'])
+                                                  values=['Point', 'Line', 'Wireframe', 'Curve'])
         self.object_types_combobox.current(0)
         self.object_types_combobox.pack()
 
@@ -239,7 +239,7 @@ class GraphicsSystem2D:
         for i in range(4):
             if p[i] == 0:
                 if q[i] < 0:
-                    return None  # Linha está fora da janela
+                    return None, None, None, None  # Linha está fora da janela
             else:
                 r = q[i] / p[i]
                 if p[i] < 0:
@@ -248,7 +248,7 @@ class GraphicsSystem2D:
                     t2 = min(t2, r)
 
         if t1 > t2:
-            return None  # Linha está fora da janela
+            return None, None, None, None  # Linha está fora da janela
 
         x1_clip = x1 + t1 * dx
         y1_clip = y1 + t1 * dy
@@ -270,7 +270,7 @@ class GraphicsSystem2D:
                 return x1, y1, x2, y2
 
             if code1 & code2:  # Ambos pontos estão fora da janela
-                return None
+                return None, None, None, None
 
             # Escolher um dos pontos fora da janela
             code_outside = code1 if code1 else code2
@@ -518,9 +518,10 @@ class GraphicsSystem2D:
                                                                                obj.end_point_scn[1])
             x1_clip, y1_clip, x2_clip, y2_clip = self.clip_line(obj.start_point_scn[0], obj.start_point_scn[1],
                                                                 obj.end_point_scn[0], obj.end_point_scn[1])
-            x1, y1 = self.transform_to_viewport(x1_clip, y1_clip)
-            x2, y2 = self.transform_to_viewport(x2_clip, y2_clip)
-            self.canvas.create_line(x1, y1, x2, y2, fill=obj.color)
+            if x1_clip is not None:
+                x1, y1 = self.transform_to_viewport(x1_clip, y1_clip)
+                x2, y2 = self.transform_to_viewport(x2_clip, y2_clip)
+                self.canvas.create_line(x1, y1, x2, y2, fill=obj.color)
         elif obj.type == 'Wireframe':
             transformed_coords = []
             for i in range(len(obj.point_list_scn)):
@@ -535,10 +536,8 @@ class GraphicsSystem2D:
             transformed_coords = []
             for i in range(len(obj.point_list_scn)):
                 obj.point_list_scn[i] = self.rotate_align_vup(obj.point_list_scn[i][0], obj.point_list_scn[i][1])
-                # TODO: implementar método de clipping para curva
             for i in range(len(obj.point_list_scn)):
                 x, y = obj.point_list_scn[i]
-                # x, y = self.transform_to_viewport(point[0], point[1])
                 transformed_coords.append((x, y))
             self.draw_hermite_curve(transformed_coords, obj.color)
 
@@ -584,9 +583,14 @@ class GraphicsSystem2D:
                 x = h1 * p0[0] + h2 * p1[0] + h3 * m0[0] + h4 * m1[0]
                 y = h1 * p0[1] + h2 * p1[1] + h3 * m0[1] + h4 * m1[1]
 
-                x, y = self.transform_to_viewport(x, y)  # Transformar as coordenadas para a viewport
-                if self.clip_point(x, y):  # Verificar se o ponto está dentro da viewport
-                    self.canvas.create_oval(x, y, x + 2, y + 2, fill=color)  # Desenhar o ponto na viewport
+                if i > 1:
+                    x1_clip, y1_clip, x2_clip, y2_clip = self.clip_line(prev_x, prev_y, x, y)
+                    if x1_clip is not None:
+                        x1, y1 = self.transform_to_viewport(x1_clip, y1_clip)
+                        x2, y2 = self.transform_to_viewport(x2_clip, y2_clip)
+                        self.canvas.create_line(x1, y1, x2, y2, fill=color)
+
+                prev_x, prev_y = x, y
 
     def rotate_vup(self):
         angle = float(self.entry_rotation.get())
@@ -642,26 +646,31 @@ class GraphicsSystem2D:
         self.draw_display_file()
 
     def add_object(self):
-        coordinates_str = self.entry_coordinates.get()
-        object_color = self.color_string.get()
-        filled = self.fill_var.get()
-        coordinates = coordinates_str.split(",")
-        # coordinates_head = coordinates.pop(0)
-        coordinates_head = self.object_type.get()
-        coordinates = list(map(lambda x: int(x), coordinates))
-        coordinates = [(coordinates[i], coordinates[i + 1]) for i in range(0, len(coordinates), 2)]
+        try:
+            coordinates_str = self.entry_coordinates.get()
+            object_color = self.color_string.get()
+            filled = self.fill_var.get()
+            coordinates = coordinates_str.replace("(", "").replace(")", "").split(",")
+            # coordinates_head = coordinates.pop(0)
+            coordinates_head = self.object_type.get()
+            coordinates = list(map(lambda x: int(x), coordinates))
+            coordinates = [(coordinates[i], coordinates[i + 1]) for i in range(0, len(coordinates), 2)]
 
-        if coordinates_head.upper() == "POINT":
-            self.display_file.add_point(coordinates[0], object_color)
-        elif coordinates_head.upper() == "LINE":
-            self.display_file.add_line(coordinates, object_color)
-        elif coordinates_head.upper() == "WIREFRAME":
-            self.display_file.add_wireframe(coordinates, object_color, filled)
-        elif coordinates_head.upper() == "CURVE":
-            self.display_file.add_curve(coordinates, object_color)
-        else:
-            print("Unable to add object")
-        self.draw_display_file()
+            if coordinates_head.upper() == "POINT":
+                self.display_file.add_point(coordinates[0], object_color)
+            elif coordinates_head.upper() == "LINE":
+                self.display_file.add_line(coordinates, object_color)
+            elif coordinates_head.upper() == "WIREFRAME":
+                self.display_file.add_wireframe(coordinates, object_color, filled)
+            elif coordinates_head.upper() == "CURVE":
+                self.display_file.add_curve(coordinates, object_color)
+            else:
+                print("Unable to add object")
+            self.draw_display_file()
+        except IndexError:
+            print("Insufficient coordinates")
+        except ValueError:
+            print("Invalid coordinates")
 
     def remove_object(self):
         object_name = self.entry_object_name.get()
