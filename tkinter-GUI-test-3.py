@@ -132,6 +132,7 @@ class GraphicsSystem2D:
         self.setup_import_object_interface()
         self.setup_clipping_interface()
 
+
         self.angle_vup = 0  # Inicializa o ângulo de rotação de Vup como 0
 
     def transform_to_viewport(self, x, y):
@@ -510,30 +511,30 @@ class GraphicsSystem2D:
                 self.draw_hermite_curve(coordinates, color)
 
     def draw_hermite_curve(self, control_points, color):
-        num_segments = 100  # Número de segmentos para desenhar a curva
-        t_values = np.linspace(0, 1, num_segments)
+        pass
+        # num_segments = 100  # Número de segmentos para desenhar a curva
+        # t_values = np.linspace(0, 1, num_segments)
 
-        print("CONTROL")
-        print(control_points)
+        # print("CONTROL")
+        # print(control_points)
 
-        for i in range(1,len(control_points) - 3, 3):
-            p0, m0, m1, p1 = control_points[i:i+4]  # Extrair os pontos de controle e vetores de tangente
+        # for i in range(1,len(control_points) - 2):
+        #     #p0, m0, p1, m1 = control_points[i]  # Extrair os pontos de controle e vetores de tangente
 
+        #     for t in t_values:
+        #         t2 = t * t
+        #         t3 = t2 * t
+        #         h1 = 2 * t3 - 3 * t2 + 1
+        #         h2 = -2 * t3 + 3 * t2
+        #         h3 = t3 - 2 * t2 + t
+        #         h4 = t3 - t2
 
-            for t in t_values:
-                t2 = t * t
-                t3 = t2 * t
-                h1 = 2 * t3 - 3 * t2 + 1
-                h2 = -2 * t3 + 3 * t2
-                h3 = t3 - 2 * t2 + t
-                h4 = t3 - t2
+        #         x = h1 * p0[0] + h2 * p1[0] + h3 * m0[0] + h4 * m1[0]
+        #         y = h1 * p0[1] + h2 * p1[1] + h3 * m0[1] + h4 * m1[1]
 
-                x = h1 * p0[0] + h2 * p1[0] + h3 * m0[0] + h4 * m1[0]
-                y = h1 * p0[1] + h2 * p1[1] + h3 * m0[1] + h4 * m1[1]
-
-                x, y = self.transform_to_viewport(x, y)  # Transformar as coordenadas para a viewport
-                if self.clip_point(x, y):  # Verificar se o ponto está dentro da viewport
-                    self.canvas.create_oval(x, y, x + 2, y + 2, fill=color)  # Desenhar o ponto na viewport
+        #         x, y = self.transform_to_viewport(x, y)  # Transformar as coordenadas para a viewport
+        #         if self.clip_point(x, y):  # Verificar se o ponto está dentro da viewport
+        #             self.canvas.create_oval(x, y, x + 2, y + 2, fill=color)  # Desenhar o ponto na viewport
 
     def pan(self, dx, dy):
         self.window[0] += dx
@@ -581,13 +582,16 @@ class GraphicsSystem2D:
         
         if object_type == 'hermite_curve':
             coordinates = self.parse_hermite_curve(coordinates_str)
+        elif object_type == "B-Spline":
+            parsed_coord = self.parse_hermite_curve(coordinates_str)
+            coordinates = self.calculate_b_spline(parsed_coord)
         else:
             coordinates = self.parse_coordinates(coordinates_str)
 
         print(coordinates)
 
         if coordinates:
-            if (object_type == "hermite_curve"):
+            if (object_type == "hermite_curve" or object_type == "B-Spline"):
                 self.display_file.add_curve(coordinates)
             elif len(coordinates) == 1:
                 self.display_file.add_point(coordinates)
@@ -621,6 +625,25 @@ class GraphicsSystem2D:
             print("Erro ao analisar as coordenadas:", e)
             return None
         return coordinates
+    
+    def calculate_b_spline(self, control_points):
+        num_points = len(control_points)
+        spline_points = []
+
+        # Forward Differences algorithm for B-Splines
+        for i in range(num_points - 3):
+            for t in np.arange(0, 1, 0.01):
+                x = ((-1 * t ** 3 + 3 * t ** 2 - 3 * t + 1) / 6) * control_points[i][0] + \
+                    ((3 * t ** 3 - 6 * t ** 2 + 4) / 6) * control_points[i + 1][0] + \
+                    ((-3 * t ** 3 + 3 * t ** 2 + 3 * t + 1) / 6) * control_points[i + 2][0] + \
+                    (t ** 3 / 6) * control_points[i + 3][0]
+                y = ((-1 * t ** 3 + 3 * t ** 2 - 3 * t + 1) / 6) * control_points[i][1] + \
+                    ((3 * t ** 3 - 6 * t ** 2 + 4) / 6) * control_points[i + 1][1] + \
+                    ((-3 * t ** 3 + 3 * t ** 2 + 3 * t + 1) / 6) * control_points[i + 2][1] + \
+                    (t ** 3 / 6) * control_points[i + 3][1]
+                spline_points.append((x, y))
+
+        return spline_points
 
 
     def rotate_vup(self):
@@ -659,7 +682,7 @@ display_file = DisplayFile2D()
 display_file.add_line(((-50, -50), (50, 50)))
 display_file.add_point((50, 90))
 #display_file.add_wireframe([(100, -100), (100, 100), (-100, 100), (-100, -100)])4
-# control_points = [((-50, -50), (100, 0), (100, 0), (100, 100)), ((-50, 50), (0, 100), (0, 100), (-100, 100))]
+control_points = [((-50, -50), (100, 0), (100, 0), (100, 100)), ((-50, 50), (0, 100), (0, 100), (-100, 100))]
 #display_file.add_curve(control_points, 'red')
 
 object_list = tk.Listbox(root)
