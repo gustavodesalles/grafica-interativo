@@ -1,3 +1,4 @@
+from b_spline import BSpline
 from curve import Curve
 from line import Line
 from point import Point
@@ -7,7 +8,7 @@ from wireframe import Wireframe
 class DisplayFile2D:
     def __init__(self):
         self.objects = {}  # Dicionário para armazenar objetos
-        self.counters = {'point': 0, 'line': 0, 'wireframe': 0, 'curve': 0}  # Contadores para nomeação dos objetos
+        self.counters = {'point': 0, 'line': 0, 'wireframe': 0, 'curve': 0, 'b-spline': 0}  # Contadores para nomeação dos objetos
 
     def add_point(self, coordinates, color='black'):
         try:
@@ -42,6 +43,15 @@ class DisplayFile2D:
             curve = Curve(coordinates, name, color)
             self.objects[name] = curve
             self.counters['curve'] += 1
+        except ValueError:
+            print("Invalid coordinates")
+
+    def add_b_spline(self, coordinates, color='black'):
+        try:
+            name = f'BSpline{self.counters["b-spline"] + 1}'
+            b_spline = BSpline(coordinates, name, color)
+            self.objects[name] = b_spline
+            self.counters['b-spline'] += 1
         except ValueError:
             print("Invalid coordinates")
 

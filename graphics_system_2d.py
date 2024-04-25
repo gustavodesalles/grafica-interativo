@@ -113,11 +113,17 @@ class GraphicsSystem2D:
         self.button_add_object.pack(side=tk.TOP)
 
     def setup_pan_interface(self):
+        button_pan_up = tk.Button(self.master, text="Pan Up", command=self.pan_up)
+        button_pan_up.pack(side=tk.TOP)
+
         button_pan_left = tk.Button(self.master, text="Pan Left", command=self.pan_left)
         button_pan_left.pack(side=tk.TOP)
 
         button_pan_right = tk.Button(self.master, text="Pan Right", command=self.pan_right)
         button_pan_right.pack(side=tk.TOP)
+
+        button_pan_down = tk.Button(self.master, text="Pan Down", command=self.pan_down)
+        button_pan_down.pack(side=tk.TOP)
 
     def setup_zoom_interface(self):
         button_zoom_in = tk.Button(self.master, text="Zoom In", command=self.zoom_in)
@@ -415,6 +421,8 @@ class GraphicsSystem2D:
                     self.display_file.add_wireframe(vertices, color, filled)
                 elif type.upper() == 'CURVE':
                     self.display_file.add_curve(vertices, color)
+                elif type.upper() == 'B-SPLINE':
+                    self.display_file.add_b_spline(vertices, color)
                 self.draw_display_file()
                 print(f"Objeto importado de '{file_path}'.")
         except FileNotFoundError:
@@ -532,14 +540,17 @@ class GraphicsSystem2D:
                 x, y = self.transform_to_viewport(point[0], point[1])
                 transformed_coords.append((x, y))
             self.draw_wireframe(transformed_coords, obj.color, obj.filled)
-        elif obj.type == 'Curve':
+        else:
             transformed_coords = []
             for i in range(len(obj.point_list_scn)):
                 obj.point_list_scn[i] = self.rotate_align_vup(obj.point_list_scn[i][0], obj.point_list_scn[i][1])
             for i in range(len(obj.point_list_scn)):
                 x, y = obj.point_list_scn[i]
                 transformed_coords.append((x, y))
-            self.draw_hermite_curve(transformed_coords, obj.color)
+            if obj.type == 'Curve':
+                self.draw_hermite_curve(transformed_coords, obj.color)
+            elif obj.type == 'B-Spline' and len(transformed_coords) > 3:
+                self.calculate_b_spline(transformed_coords, obj.color)
 
     def draw_wireframe(self, coordinates, color, filled):
         # Desenhar as linhas do polígono
@@ -592,6 +603,34 @@ class GraphicsSystem2D:
 
                 prev_x, prev_y = x, y
 
+    def calculate_b_spline(self, control_points, color):
+        num_points = len(control_points)
+        spline_points = []
+
+        # Forward Differences algorithm for B-Splines
+        for i in range(num_points - 3):
+            for t in np.arange(0, 1, 0.01):
+                x = ((-1 * t ** 3 + 3 * t ** 2 - 3 * t + 1) / 6) * control_points[i][0] + \
+                    ((3 * t ** 3 - 6 * t ** 2 + 4) / 6) * control_points[i + 1][0] + \
+                    ((-3 * t ** 3 + 3 * t ** 2 + 3 * t + 1) / 6) * control_points[i + 2][0] + \
+                    (t ** 3 / 6) * control_points[i + 3][0]
+                y = ((-1 * t ** 3 + 3 * t ** 2 - 3 * t + 1) / 6) * control_points[i][1] + \
+                    ((3 * t ** 3 - 6 * t ** 2 + 4) / 6) * control_points[i + 1][1] + \
+                    ((-3 * t ** 3 + 3 * t ** 2 + 3 * t + 1) / 6) * control_points[i + 2][1] + \
+                    (t ** 3 / 6) * control_points[i + 3][1]
+                spline_points.append((x, y))
+
+                if i > 0:
+                    x1_clip, y1_clip, x2_clip, y2_clip = self.clip_line(prev_x, prev_y, x, y)
+                    if x1_clip is not None:
+                        x1, y1 = self.transform_to_viewport(x1_clip, y1_clip)
+                        x2, y2 = self.transform_to_viewport(x2_clip, y2_clip)
+                        self.canvas.create_line(x1, y1, x2, y2, fill=color)
+
+                prev_x, prev_y = x, y
+
+        return spline_points
+
     def rotate_vup(self):
         angle = float(self.entry_rotation.get())
         self.angle_vup = angle
@@ -624,6 +663,14 @@ class GraphicsSystem2D:
 
     def pan_right(self):
         self.pan(20, 0)
+        self.draw_display_file()
+
+    def pan_up(self):
+        self.pan(0, 20)
+        self.draw_display_file()
+
+    def pan_down(self):
+        self.pan(0, -20)
         self.draw_display_file()
 
     def zoom(self, factor):
@@ -664,6 +711,8 @@ class GraphicsSystem2D:
                 self.display_file.add_wireframe(coordinates, object_color, filled)
             elif coordinates_head.upper() == "CURVE":
                 self.display_file.add_curve(coordinates, object_color)
+            elif coordinates_head.upper() == "B-SPLINE":
+                self.display_file.add_b_spline(coordinates, object_color)
             else:
                 print("Unable to add object")
             self.draw_display_file()
