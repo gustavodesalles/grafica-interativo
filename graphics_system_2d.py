@@ -580,7 +580,7 @@ class GraphicsSystem2D:
         num_segments = 100  # Número de segmentos para desenhar a curva
         t_values = np.linspace(0, 1, num_segments)
 
-        for i in range(1, len(control_points) - 3, 3):
+        for i in range(0, len(control_points) - 3, 3):
             p0, m0, m1, p1 = control_points[i:i+4]  # Extrair os pontos de controle e vetores de tangente
 
             for t in t_values:
@@ -594,7 +594,7 @@ class GraphicsSystem2D:
                 x = h1 * p0[0] + h2 * p1[0] + h3 * m0[0] + h4 * m1[0]
                 y = h1 * p0[1] + h2 * p1[1] + h3 * m0[1] + h4 * m1[1]
 
-                if i > 1:
+                if i > 0:
                     x1_clip, y1_clip, x2_clip, y2_clip = self.clip_line(prev_x, prev_y, x, y)
                     if x1_clip is not None:
                         x1, y1 = self.transform_to_viewport(x1_clip, y1_clip)

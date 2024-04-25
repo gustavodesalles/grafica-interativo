@@ -14,6 +14,7 @@ display_file = DisplayFile2D()
 # display_file.add_wireframe([(100, -100), (100, 100), (-100, 100), (-100, -100)], 'blue')
 control_points = [(-50, -50), (100, 0), (100, 0), (100, 100), (-50, 50), (0, 100), (0, 100), (-100, 100)]
 # control_points = [(20, 20), (50, 20), (100, 50), (200, 50)]
+display_file.add_curve(control_points, 'green')
 display_file.add_b_spline(control_points, 'red')
 
 object_list = tk.Listbox(root)
