@@ -1,0 +1,12 @@
+g Wireframe1
+v 100 -100 0.0
+v 100 100 0.0
+v -100 100 0.0
+v -100 -100 0.0
+l 1 2
+l 2 3
+l 3 4
+l 4 1
+# Filled: False
+# Color: blue
+# Type: Wireframe

@@ -5,8 +5,6 @@ class CoordenadasMundo:
         self.xmax = xmax
         self.ymax = ymax
 
-    def transforma_viewport(self, window, viewport, xw, yw):
-        xvp = ((xw - window.xmin)/(window.xmax - window.xmin)) * (viewport.xmax - viewport.xmin)
-        yvp = (1 - (yw - window.ymin)/(window.ymax - window.ymin)) * (viewport.ymax - viewport.ymin)
-        return xvp, yvp
+    def coordinates(self):
+        return self.xmin, self.ymin, self.xmax, self.ymax
     
