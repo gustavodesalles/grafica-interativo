@@ -87,7 +87,7 @@ class GraphicsSystem2D:
     def setup_add_object_interface(self):
         self.object_type = tk.StringVar()
         self.object_types_combobox = ttk.Combobox(self.master, state="readonly", textvariable=self.object_type,
-                                                  values=['Point', 'Line', 'Wireframe', 'Curve'])
+                                                  values=['Point', 'Line', 'Wireframe', 'Curve', 'B-Spline'])
         self.object_types_combobox.current(0)
         self.object_types_combobox.pack()
 
@@ -503,7 +503,7 @@ class GraphicsSystem2D:
             obj.start_point_scn = np.dot(transformation_matrix,
                                          np.array([obj.start_point_scn[0], obj.start_point_scn[1], 1]))
             obj.end_point_scn = np.dot(transformation_matrix, np.array([obj.end_point_scn[0], obj.end_point_scn[1], 1]))
-        elif obj.type == 'Wireframe' or obj.type == 'Curve':
+        elif obj.type == 'Wireframe' or obj.type == 'Curve' or obj.type == 'B-Spline':
             for i in range(len(obj.point_list_scn)):
                 point = obj.point_list[i]
                 point_vector = np.dot(transformation_matrix, np.array([point[0], point[1], 1]))
@@ -731,7 +731,7 @@ class GraphicsSystem2D:
             return obj.coordinate_x, obj.coordinate_y
         elif obj.type == "Line":
             return (obj.start_point[0] + obj.end_point[0]) / 2, (obj.start_point[1] + obj.end_point[1]) / 2
-        elif obj.type == "Wireframe" or obj.type == "Curve":
+        elif obj.type == "Wireframe" or obj.type == "Curve" or obj.type == "B-Spline":
             center_x = sum([p[0] for p in obj.point_list]) / len(obj.point_list)
             center_y = sum([p[1] for p in obj.point_list]) / len(obj.point_list)
             return center_x, center_y
