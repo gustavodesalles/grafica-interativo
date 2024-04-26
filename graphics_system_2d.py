@@ -15,51 +15,299 @@ class GraphicsSystem2D:
         self.display_file = display_file
         self.object_list = object_list
 
-        self.canvas = tk.Canvas(master, width=800, height=500, bg='white')
+        self.master.title("2D Graphics System")  # Definindo o título da janela
+
+        # Adicionando um estilo ao tema
+        self.style = ttk.Style()
+        self.style.theme_use("clam")
+
+        # Definindo as cores
+        self.bg_color = 'white'
+        self.frame_color = 'lightgray'
+        self.button_color = 'lightblue'
+        self.label_color = 'black'
+
+        self.canvas = tk.Canvas(master, width=800, height=500, bg=self.bg_color)
         self.canvas.pack(side=tk.LEFT)
+
+        # Coordenadas do canvas
         canvas_width = self.canvas.winfo_reqwidth()
         canvas_height = self.canvas.winfo_reqheight()
 
         viewport_margin = 20
-        # self.window = [-300, -200, 300, 200]  # Coordenadas da janela
         self.window = Window(0, 0, canvas_width, canvas_height)
         self.viewport = Viewport(canvas_width // 4 + viewport_margin,
                                  canvas_height // 4 + viewport_margin,
                                  3 * canvas_width // 4 - viewport_margin,
-                                 3 * canvas_height // 4 - viewport_margin)  # Coordenadas da viewport
+                                 3 * canvas_height // 4 - viewport_margin)
 
-        # Desenhar uma moldura ao redor da viewport
         self.viewport_frame = self.canvas.create_rectangle(self.viewport.coordinates(), outline='green')
 
-        # Inicializar a técnica de clipagem atual
         self.clipping_method = 'parametric'
 
-        self.setup_object_list_interface()
-        self.setup_pan_interface()
-        self.setup_zoom_interface()
-        self.setup_add_object_interface()
-        self.setup_remove_object_interface()
-        self.setup_transformation_interface()
-        self.setup_rotation_interface()
-        self.setup_export_object_interface()
-        self.setup_import_object_interface()
-        self.setup_clipping_interface()
+        self.angle_vup = 0
 
-        self.angle_vup = 0  # Inicializa o ângulo de rotação de Vup como 0
+        self.setup_object_list_interface()
+        self.setup_basic_button()
+        self.setup_add_remove_object_button()
+        self.setup_transform_object_button() # WARN: This is not working for some reason.
+        self.setup_rotation_object_button()
+        self.setup_export_object_button()
+        self.setup_import_object_button()
+        self.setup_clipping_object_button()
+
+    def setup_object_list_interface(self):
+        self.object_list_frame = tk.Frame(self.master, bg=self.frame_color)
+        self.object_list_frame.pack(side=tk.RIGHT, fill=tk.BOTH, padx=10, pady=10)
+        self.object_list_title = tk.Label(self.object_list_frame, text="Object List", bg=self.frame_color, fg=self.label_color)
+        self.object_list_title.pack()
+        self.object_list_label = tk.Label(self.object_list_frame, text="", bg=self.frame_color, fg=self.label_color)
+        self.object_list_label.pack()
+
+    def setup_basic_button(self):
+        basic_button = tk.Button(self.master, text="Basic", command=self.setup_basic_interface)
+        basic_button.pack(side=tk.TOP, padx=10, pady=10)
+
+    def setup_add_remove_object_button(self):
+        add_remove_button = tk.Button(self.master, text="Add/Remove Object", command=self.setup_add_remove_object_interface)
+        add_remove_button.pack(side=tk.TOP, padx=10, pady=10)
+
+    def setup_transform_object_button(self):
+        transform_button = tk.Button(self.master, text="Transform Object", command=self.setup_transformation_interface)
+        transform_button.pack(side=tk.TOP, padx=10, pady=10)
+
+    def setup_rotation_object_button(self):
+        rotate_button = tk.Button(self.master, text="Rotate Object", command=self.setup_rotation_interface)
+        rotate_button.pack(side=tk.TOP, padx=10, pady=10)
+
+    def setup_export_object_button(self):
+        export_button = tk.Button(self.master, text="Export Object", command=self.setup_export_object_interface)
+        export_button.pack(side=tk.TOP, padx=10, pady=10)
+
+    def setup_import_object_button(self):
+        import_button = tk.Button(self.master, text="Import Object", command=self.setup_import_object_interface)
+        import_button.pack(side=tk.TOP, padx=10, pady=10)
+
+    def setup_clipping_object_button(self):
+        clip_button = tk.Button(self.master, text="Clipping method", command=self.setup_clipping_interface)
+        clip_button.pack(side=tk.TOP, padx=10, pady=10)
+
+
+    def setup_basic_interface(self):
+        basic_window = tk.Toplevel(self.master)
+        basic_window.title("Basic Functionalities")
+
+        basic_frame = tk.Frame(basic_window, bg=self.frame_color)
+        basic_frame.pack(padx=10, pady=10)
+
+        button_pan_up = tk.Button(basic_frame, text="Pan Up", command=self.pan_up)
+        button_pan_up.grid(row=0, column=0, pady=5)
+
+        button_pan_left = tk.Button(basic_frame, text="Pan Left", command=self.pan_left)
+        button_pan_left.grid(row=1, column=0)
+
+        button_pan_right = tk.Button(basic_frame, text="Pan Right", command=self.pan_right)
+        button_pan_right.grid(row=1, column=2)
+
+        button_pan_down = tk.Button(basic_frame, text="Pan Down", command=self.pan_down)
+        button_pan_down.grid(row=2, column=0, pady=5)
+
+        button_zoom_in = tk.Button(basic_frame, text="Zoom In", command=self.zoom_in)
+        button_zoom_in.grid(row=0, column=1, padx=5)
+
+        button_zoom_out = tk.Button(basic_frame, text="Zoom Out", command=self.zoom_out)
+        button_zoom_out.grid(row=0, column=2, padx=5)
+
+    def setup_add_remove_object_interface(self):
+        add_remove_window = tk.Toplevel(self.master)
+        add_remove_window.title("Add/Remove Object")
+
+        add_remove_frame = tk.Frame(add_remove_window, bg=self.frame_color)
+        add_remove_frame.pack(padx=10, pady=10)
+
+        # Add Object Interface
+        label_add_object = tk.Label(add_remove_frame, text="Add Object:", bg=self.frame_color, fg=self.label_color)
+        label_add_object.grid(row=0, column=0, padx=5, pady=5)
+
+        # Set up the interface for adding objects
+        self.setup_add_object_interface(add_remove_frame, row=0, column=1)
+
+        # Remove Object Interface
+        label_remove_object = tk.Label(add_remove_frame, text="Remove Object:", bg=self.frame_color, fg=self.label_color)
+        label_remove_object.grid(row=1, column=0, padx=5, pady=5)
+
+        # Set up the interface for removing objects
+        self.setup_remove_object_interface(add_remove_frame, row=1, column=1)
+
+    def setup_add_object_interface(self, parent_frame, row, column):
+        add_object_frame = tk.Frame(parent_frame, bg=self.frame_color)
+        add_object_frame.grid(row=row, column=column, padx=5, pady=5)
+
+        # Add your interface elements for adding objects here
+        # Example: entry for object type, entry for coordinates, color selection, etc.
+        self.object_type = tk.StringVar()
+        self.object_types_combobox = ttk.Combobox(add_object_frame, state="readonly", textvariable=self.object_type,
+                                                  values=['Point', 'Line', 'Wireframe', 'Curve', 'B-Spline'])
+        self.object_types_combobox.current(0)
+        self.object_types_combobox.pack(pady=10)
+
+        self.label_coordinates = tk.Label(add_object_frame, text="Coordinates:")
+        self.label_coordinates.pack(side=tk.TOP)
+
+        self.entry_coordinates = tk.Entry(add_object_frame)
+        self.entry_coordinates.pack()
+
+        self.color_string = tk.StringVar()
+        self.c1 = tk.Radiobutton(add_object_frame, text="Red", value="red", variable=self.color_string)
+        self.c2 = tk.Radiobutton(add_object_frame, text="Green", value="green", variable=self.color_string)
+        self.c3 = tk.Radiobutton(add_object_frame, text="Blue", value="blue", variable=self.color_string)
+        self.c1.pack()
+        self.c2.pack()
+        self.c3.pack()
+
+        self.fill_var = tk.BooleanVar()
+        self.f1 = tk.Checkbutton(add_object_frame, text="Fill wireframe", variable=self.fill_var)
+        self.f1.pack()
+
+        self.button_add_object = tk.Button(add_object_frame, text="Add Object", command=self.add_object, bg=self.button_color)
+        self.button_add_object.pack(side=tk.TOP)
+
+    def setup_remove_object_interface(self, parent_frame, row, column):
+        remove_object_frame = tk.Frame(parent_frame, bg=self.frame_color)
+        remove_object_frame.grid(row=row, column=column, padx=5, pady=5)
+
+        # Add your interface elements for removing objects here
+        # Example: entry for object name, button to remove object, etc.
+        self.object_name_label = tk.Label(remove_object_frame, text="Object Name:", bg=self.frame_color, fg=self.label_color)
+        self.object_name_label.pack()
+        self.entry_object_name = tk.Entry(remove_object_frame)
+        self.entry_object_name.pack()
+        self.button_remove_object = tk.Button(remove_object_frame, text="Remove Object", command=self.remove_object, bg=self.button_color)
+        self.button_remove_object.pack()
+
+    def setup_transformation_interface(self):
+
+        transform_window = tk.Toplevel(self.master)
+        transform_window.title("Transform Object")
+
+        transform_frame = tk.Frame(transform_window, bg=self.frame_color)
+        transform_frame.pack(padx=10, pady=10)
+
+        # Transformation Interface
+        label_transformation = tk.Label(transform_frame, text="Transformation", bg=self.frame_color, fg=self.label_color)
+        label_transformation.grid(row=0, column=0, padx=5, pady=5)
+
+        self.entry_transformation = tk.StringVar()
+        self.r1 = tk.Radiobutton(transform_frame, text="Translation", value="translation",
+                                 variable=self.entry_transformation, bg=self.frame_color)
+        self.r2 = tk.Radiobutton(transform_frame, text="Scaling", value="scaling", variable=self.entry_transformation, bg=self.frame_color)
+        self.r3 = tk.Radiobutton(transform_frame, text="Rotation around origin", value="rotation",
+                                 variable=self.entry_transformation, bg=self.frame_color)
+        self.r4 = tk.Radiobutton(transform_frame, text="Rotation around object's center", value="center_rotation",
+                                 variable=self.entry_transformation, bg=self.frame_color)
+        self.r5 = tk.Radiobutton(transform_frame, text="Rotation around arbitrary point", value="arbitrary_rotation",
+                                 variable=self.entry_transformation, bg=self.frame_color)
+        self.r1.pack()
+        self.r2.pack()
+        self.r3.pack()
+        self.r4.pack()
+        self.r5.pack()
+
+        self.label_object_name = tk.Label(transform_frame, text="Object Name:", bg=self.frame_color, fg=self.label_color)
+        self.label_object_name.pack()
+
+        self.entry_object_name_transform = tk.Entry(transform_frame)
+        self.entry_object_name_transform.pack()
+
+        self.label_params = tk.Label(transform_frame, text="Params (comma separated)", bg=self.frame_color, fg=self.label_color)
+        self.label_params.pack()
+
+        self.entry_params = tk.Entry(transform_frame)
+        self.entry_params.pack()
+
+        self.button_transform = tk.Button(transform_frame, text="Transform Object", command=self.transform_object, bg=self.button_color)
+        self.button_transform.pack()
+
+    def setup_rotation_interface(self):
+
+        basic_window = tk.Toplevel(self.master)
+        basic_window.title("Rotation")
+
+        basic_frame = tk.Frame(basic_window, bg=self.frame_color)
+        basic_frame.pack(padx=10, pady=10)
+
+        self.label_rotation = tk.Label(basic_frame, text="Rotation Angle (Vup):", bg=self.frame_color, fg=self.label_color)
+        self.label_rotation.pack()
+        self.entry_rotation = tk.Entry(basic_frame)
+        self.entry_rotation.pack()
+        self.button_rotate_window = tk.Button(basic_frame, text="Rotate Window", command=self.rotate_vup, bg=self.button_color)
+        self.button_rotate_window.pack()
+
+    def setup_export_object_interface(self):
+        basic_window = tk.Toplevel(self.master)
+        basic_window.title("Export")
+
+        basic_frame = tk.Frame(basic_window, bg=self.frame_color)
+        basic_frame.pack(padx=10, pady=10)
+
+        self.label_export_obj = tk.Label(basic_frame, text="Export Obj:", bg=self.frame_color, fg=self.label_color)
+        self.label_export_obj.pack(side=tk.LEFT, padx=10, pady=10)
+
+        self.entry_export_obj_name = tk.Entry(basic_frame)
+        self.entry_export_obj_name.pack(side=tk.LEFT, padx=10, pady=10)
+
+        self.button_export_object = tk.Button(basic_frame, text="Export Obj", command=self.export_object, bg=self.button_color)
+        self.button_export_object.pack(side=tk.LEFT, padx=10, pady=10)
+
+    def setup_import_object_interface(self):
+        basic_window = tk.Toplevel(self.master)
+        basic_window.title("Import")
+
+        basic_frame = tk.Frame(basic_window, bg=self.frame_color)
+        basic_frame.pack(padx=10, pady=10)
+
+        self.label_import_obj = tk.Label(basic_frame, text="Import Obj:", bg=self.frame_color, fg=self.label_color)
+        self.label_import_obj.pack(side=tk.TOP, padx=10, pady=5)
+
+        self.entry_import_obj_name = tk.Entry(basic_frame)
+        self.entry_import_obj_name.pack(side=tk.TOP, padx=10, pady=5)
+
+        self.button_import_object = tk.Button(basic_frame, text="Import Obj", command=self.import_object, bg=self.button_color)
+        self.button_import_object.pack(side=tk.TOP, padx=10, pady=5)
+
+    def setup_clipping_interface(self):
+        basic_window = tk.Toplevel(self.master)
+        basic_window.title("Import")
+
+        basic_frame = tk.Frame(basic_window, bg=self.frame_color)
+        basic_frame.pack(padx=10, pady=10)
+
+        self.label_clipping_method = tk.Label(basic_frame, text="Clipping Method", bg=self.frame_color, fg=self.label_color)
+        self.label_clipping_method.pack()
+
+        self.var_clipping_method = tk.StringVar()
+        self.var_clipping_method.set('parametric')
+
+        self.radio_parametric = tk.Radiobutton(basic_frame, text="Parametric Clipping",
+                                               variable=self.var_clipping_method, value='parametric',
+                                               command=self.change_clipping_method, bg=self.frame_color)
+        self.radio_parametric.pack()
+
+        self.radio_cohen_sutherland = tk.Radiobutton(basic_frame, text="Cohen-Sutherland Clipping",
+                                                     variable=self.var_clipping_method, value='cohen_sutherland',
+                                                     command=self.change_clipping_method, bg=self.frame_color)
+        self.radio_cohen_sutherland.pack()
 
     def rotate_align_vup(self, x, y):
-        # Obter os ângulos de rotação
         theta = np.radians(self.angle_vup)
         cos_theta = np.cos(theta)
         sin_theta = np.sin(theta)
 
-        # Aplicar rotação para alinhar vup com o eixo Y
         x_rotated = x * cos_theta - y * sin_theta
         y_rotated = x * sin_theta + y * cos_theta
         return x_rotated, y_rotated
 
     def transform_to_viewport(self, x_rotated, y_rotated):
-        # Normalizar coordenadas
         xmin, ymin, xmax, ymax = self.window.coordinates()
         xvmin, yvmin, xvmax, yvmax = self.viewport.coordinates()
 
@@ -68,151 +316,7 @@ class GraphicsSystem2D:
 
         return xv, yv
 
-    def setup_object_list_interface(self):
-        self.object_list_frame = tk.Frame(self.master)
-        self.object_list_frame.pack(side=tk.RIGHT)
-        self.object_list_title = tk.Label(self.object_list_frame, text="Object List")
-        self.object_list_title.pack()
-        self.object_list_label = tk.Label(self.object_list_frame, text="")
-        self.object_list_label.pack()
-
-    def setup_remove_object_interface(self):
-        self.object_name_label = tk.Label(self.object_list_frame, text="Object Name:")
-        self.object_name_label.pack()
-        self.entry_object_name = tk.Entry(self.object_list_frame)
-        self.entry_object_name.pack()
-        self.button_remove_object = tk.Button(self.object_list_frame, text="Remove Object", command=self.remove_object)
-        self.button_remove_object.pack()
-
-    def setup_add_object_interface(self):
-        self.object_type = tk.StringVar()
-        self.object_types_combobox = ttk.Combobox(self.master, state="readonly", textvariable=self.object_type,
-                                                  values=['Point', 'Line', 'Wireframe', 'Curve', 'B-Spline'])
-        self.object_types_combobox.current(0)
-        self.object_types_combobox.pack()
-
-        self.label_coordinates = tk.Label(self.master, text="Coordinates:")
-        self.label_coordinates.pack(side=tk.TOP)
-
-        self.entry_coordinates = tk.Entry(self.master)
-        self.entry_coordinates.pack(side=tk.TOP)
-
-        self.color_string = tk.StringVar()
-        self.c1 = tk.Radiobutton(self.master, text="Red", value="red", variable=self.color_string)
-        self.c2 = tk.Radiobutton(self.master, text="Green", value="green", variable=self.color_string)
-        self.c3 = tk.Radiobutton(self.master, text="Blue", value="blue", variable=self.color_string)
-        self.c1.pack()
-        self.c2.pack()
-        self.c3.pack()
-
-        self.fill_var = tk.BooleanVar()
-        self.f1 = tk.Checkbutton(self.master, text="Fill wireframe", variable=self.fill_var)
-        self.f1.pack()
-
-        self.button_add_object = tk.Button(self.master, text="Add Object", command=self.add_object)
-        self.button_add_object.pack(side=tk.TOP)
-
-    def setup_pan_interface(self):
-        button_pan_up = tk.Button(self.master, text="Pan Up", command=self.pan_up)
-        button_pan_up.pack(side=tk.TOP)
-
-        button_pan_left = tk.Button(self.master, text="Pan Left", command=self.pan_left)
-        button_pan_left.pack(side=tk.TOP)
-
-        button_pan_right = tk.Button(self.master, text="Pan Right", command=self.pan_right)
-        button_pan_right.pack(side=tk.TOP)
-
-        button_pan_down = tk.Button(self.master, text="Pan Down", command=self.pan_down)
-        button_pan_down.pack(side=tk.TOP)
-
-    def setup_zoom_interface(self):
-        button_zoom_in = tk.Button(self.master, text="Zoom In", command=self.zoom_in)
-        button_zoom_in.pack(side=tk.TOP)
-
-        button_zoom_out = tk.Button(self.master, text="Zoom Out", command=self.zoom_out)
-        button_zoom_out.pack(side=tk.TOP)
-
-    def setup_transformation_interface(self):
-        self.label_transformation = tk.Label(self.master, text="Transformation")
-        self.label_transformation.pack()
-
-        # self.entry_transformation = tk.Entry(self.master)
-        self.entry_transformation = tk.StringVar()
-        self.r1 = tk.Radiobutton(self.master, text="Translation", value="translation",
-                                 variable=self.entry_transformation)
-        self.r2 = tk.Radiobutton(self.master, text="Scaling", value="scaling", variable=self.entry_transformation)
-        self.r3 = tk.Radiobutton(self.master, text="Rotation around origin", value="rotation",
-                                 variable=self.entry_transformation)
-        self.r4 = tk.Radiobutton(self.master, text="Rotation around object's center", value="center_rotation",
-                                 variable=self.entry_transformation)
-        self.r5 = tk.Radiobutton(self.master, text="Rotation around arbitrary point", value="arbitrary_rotation",
-                                 variable=self.entry_transformation)
-        self.r1.pack()
-        self.r2.pack()
-        self.r3.pack()
-        self.r4.pack()
-        self.r5.pack()
-
-        self.label_object_name = tk.Label(self.master, text="Object Name:")
-        self.label_object_name.pack()
-
-        self.entry_object_name_transform = tk.Entry(self.master)
-        self.entry_object_name_transform.pack()
-
-        self.label_params = tk.Label(self.master, text="Params (comma separated)")
-        self.label_params.pack()
-
-        self.entry_params = tk.Entry(self.master)
-        self.entry_params.pack()
-
-        self.button_transform = tk.Button(self.master, text="Transform Object", command=self.transform_object)
-        self.button_transform.pack()
-
-    def setup_rotation_interface(self):
-        self.label_rotation = tk.Label(self.master, text="Rotation Angle (Vup):")
-        self.label_rotation.pack()
-        self.entry_rotation = tk.Entry(self.master)
-        self.entry_rotation.pack()
-        self.button_rotate_window = tk.Button(self.master, text="Rotate Window", command=self.rotate_vup)
-        self.button_rotate_window.pack()
-
-    def setup_export_object_interface(self):
-        self.label_export_obj = tk.Label(self.master, text="Export Obj:")
-        self.label_export_obj.pack()
-
-        self.entry_export_obj_name = tk.Entry(self.master)
-        self.entry_export_obj_name.pack()
-
-        self.button_export_object = tk.Button(self.master, text="Export Obj", command=self.export_object)
-        self.button_export_object.pack()
-
-    def setup_import_object_interface(self):
-        self.label_import_obj = tk.Label(self.master, text="Import Obj:")
-        self.label_import_obj.pack()
-
-        self.entry_import_obj_name = tk.Entry(self.master)
-        self.entry_import_obj_name.pack()
-
-        self.button_import_object = tk.Button(self.master, text="Import Obj", command=self.import_object)
-        self.button_import_object.pack()
-
-    def setup_clipping_interface(self):
-        # Adicionar radio buttons para selecionar a técnica de clipagem
-        self.label_clipping_method = tk.Label(self.master, text="Clipping Method")
-        self.label_clipping_method.pack()
-
-        self.var_clipping_method = tk.StringVar()
-        self.var_clipping_method.set('parametric')
-
-        self.radio_parametric = tk.Radiobutton(self.master, text="Parametric Clipping",
-                                               variable=self.var_clipping_method, value='parametric',
-                                               command=self.change_clipping_method)
-        self.radio_parametric.pack()
-
-        self.radio_cohen_sutherland = tk.Radiobutton(self.master, text="Cohen-Sutherland Clipping",
-                                                     variable=self.var_clipping_method, value='cohen_sutherland',
-                                                     command=self.change_clipping_method)
-        self.radio_cohen_sutherland.pack()
+##############################end of interface setup #####################################################
 
     def change_clipping_method(self):
         self.clipping_method = self.var_clipping_method.get()
