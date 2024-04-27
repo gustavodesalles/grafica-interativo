@@ -629,8 +629,6 @@ class GraphicsSystem2D:
 
                 prev_x, prev_y = x, y
 
-        return spline_points
-
     def rotate_vup(self):
         angle = float(self.entry_rotation.get())
         self.angle_vup = angle
@@ -710,9 +708,15 @@ class GraphicsSystem2D:
             elif coordinates_head.upper() == "WIREFRAME":
                 self.display_file.add_wireframe(coordinates, object_color, filled)
             elif coordinates_head.upper() == "CURVE":
-                self.display_file.add_curve(coordinates, object_color)
+                if len(coordinates) > 3:
+                    self.display_file.add_curve(coordinates, object_color)
+                else:
+                    print("Insufficient coordinates")
             elif coordinates_head.upper() == "B-SPLINE":
-                self.display_file.add_b_spline(coordinates, object_color)
+                if len(coordinates) > 3:
+                    self.display_file.add_b_spline(coordinates, object_color)
+                else:
+                    print("Insufficient coordinates")
             else:
                 print("Unable to add object")
             self.draw_display_file()
