@@ -199,34 +199,35 @@ class GraphicsSystem2D:
 
         self.entry_transformation = tk.StringVar()
         self.r1 = tk.Radiobutton(transform_frame, text="Translation", value="translation",
-                                 variable=self.entry_transformation, bg=self.frame_color)
+                                variable=self.entry_transformation, bg=self.frame_color)
         self.r2 = tk.Radiobutton(transform_frame, text="Scaling", value="scaling", variable=self.entry_transformation, bg=self.frame_color)
         self.r3 = tk.Radiobutton(transform_frame, text="Rotation around origin", value="rotation",
-                                 variable=self.entry_transformation, bg=self.frame_color)
+                                variable=self.entry_transformation, bg=self.frame_color)
         self.r4 = tk.Radiobutton(transform_frame, text="Rotation around object's center", value="center_rotation",
-                                 variable=self.entry_transformation, bg=self.frame_color)
+                                variable=self.entry_transformation, bg=self.frame_color)
         self.r5 = tk.Radiobutton(transform_frame, text="Rotation around arbitrary point", value="arbitrary_rotation",
-                                 variable=self.entry_transformation, bg=self.frame_color)
-        self.r1.pack()
-        self.r2.pack()
-        self.r3.pack()
-        self.r4.pack()
-        self.r5.pack()
+                                variable=self.entry_transformation, bg=self.frame_color)
+        self.r1.grid(row=1, column=0, sticky="w")
+        self.r2.grid(row=2, column=0, sticky="w")
+        self.r3.grid(row=3, column=0, sticky="w")
+        self.r4.grid(row=4, column=0, sticky="w")
+        self.r5.grid(row=5, column=0, sticky="w")
 
         self.label_object_name = tk.Label(transform_frame, text="Object Name:", bg=self.frame_color, fg=self.label_color)
-        self.label_object_name.pack()
+        self.label_object_name.grid(row=6, column=0, padx=5, pady=5, sticky="w")
 
         self.entry_object_name_transform = tk.Entry(transform_frame)
-        self.entry_object_name_transform.pack()
+        self.entry_object_name_transform.grid(row=6, column=1, padx=5, pady=5, sticky="w")
 
         self.label_params = tk.Label(transform_frame, text="Params (comma separated)", bg=self.frame_color, fg=self.label_color)
-        self.label_params.pack()
+        self.label_params.grid(row=7, column=0, padx=5, pady=5, sticky="w")
 
         self.entry_params = tk.Entry(transform_frame)
-        self.entry_params.pack()
+        self.entry_params.grid(row=7, column=1, padx=5, pady=5, sticky="w")
 
         self.button_transform = tk.Button(transform_frame, text="Transform Object", command=self.transform_object, bg=self.button_color)
-        self.button_transform.pack()
+        self.button_transform.grid(row=8, column=0, columnspan=2, padx=5, pady=5)
+
 
     def setup_rotation_interface(self):
 
