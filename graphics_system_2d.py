@@ -15,7 +15,7 @@ class GraphicsSystem2D:
         self.display_file = display_file
         self.object_list = object_list
 
-        self.master.title("2D Graphics System")  # Definindo o título da janela
+        self.master.title("Graphics System")  # Definindo o título da janela
 
         # Adicionando um estilo ao tema
         self.style = ttk.Style()
@@ -50,7 +50,7 @@ class GraphicsSystem2D:
         self.setup_object_list_interface()
         self.setup_basic_button()
         self.setup_add_remove_object_button()
-        self.setup_transform_object_button() # WARN: This is not working for some reason.
+        self.setup_transform_object_button()
         self.setup_rotation_object_button()
         self.setup_export_object_button()
         self.setup_import_object_button()
@@ -91,7 +91,6 @@ class GraphicsSystem2D:
     def setup_clipping_object_button(self):
         clip_button = tk.Button(self.master, text="Clipping method", command=self.setup_clipping_interface)
         clip_button.pack(side=tk.TOP, padx=10, pady=10)
-
 
     def setup_basic_interface(self):
         basic_window = tk.Toplevel(self.master)
@@ -186,7 +185,6 @@ class GraphicsSystem2D:
         self.button_remove_object.pack()
 
     def setup_transformation_interface(self):
-
         transform_window = tk.Toplevel(self.master)
         transform_window.title("Transform Object")
 
@@ -230,7 +228,6 @@ class GraphicsSystem2D:
 
 
     def setup_rotation_interface(self):
-
         basic_window = tk.Toplevel(self.master)
         basic_window.title("Rotation")
 

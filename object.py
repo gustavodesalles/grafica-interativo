@@ -3,3 +3,8 @@ class Object:
         self.name = name
         self.type = type
         self.color = color
+
+
+class Object3D(Object):
+    def __init__(self, segmentos=[]):
+        self.segmentos = segmentos
