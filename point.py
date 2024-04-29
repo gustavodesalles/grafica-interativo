@@ -12,7 +12,9 @@ class Point(Object):
 
 class Point3D(Object3D):
     def __init__(self, coordinate_x, coordinate_y, coordinate_z, name, color):
-        super().__init__(name, 'Point', color)
+        self.name = name
+        self.type = 'Point'
+        self.color = color
         self.coordinate_x = coordinate_x
         self.coordinate_y = coordinate_y
         self.coordinate_z = coordinate_z

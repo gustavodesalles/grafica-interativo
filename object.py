@@ -7,4 +7,4 @@ class Object:
 
 class Object3D(Object):
     def __init__(self, segmentos=[]):
-        self.segmentos = segmentos
+        self.segmentos = segmentos # lista de segmentos de reta constituídos por um par de Pontos3D

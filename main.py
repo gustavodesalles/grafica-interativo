@@ -1,25 +1,22 @@
 import tkinter as tk
-
-from display_file_2d import DisplayFile2D
-from graphics_system_2d import GraphicsSystem2D
+from display_file_3d import DisplayFile3D
+from graphics_system_3d import GraphicsSystem3D
 
 # Exemplo de uso - main file
 root = tk.Tk()
-root.title("2D Graphics System")
+root.title("3D Graphics System")
 root.geometry("1200x1000")
 
-display_file = DisplayFile2D()
-# display_file.add_line(((-50, -50), (50, 50)), 'red')
-# display_file.add_point((0, 0))
-# display_file.add_wireframe([(100, -100), (100, 100), (-100, 100), (-100, -100)], 'blue')
-control_points = [(-50, -50), (100, 0), (100, 0), (100, 100), (-50, 50), (0, 100), (0, 100), (-100, 100)]
-# control_points = [(20, 20), (50, 20), (100, 50), (200, 50)]
-display_file.add_curve(control_points, 'green')
-display_file.add_b_spline(control_points, 'red')
+display_file = DisplayFile3D()
+# Exemplo de adicionar objetos
+# display_file.add_point((50, 50, 50), color='red')
+# display_file.add_line([(-50, -50, -50), (50, 50, 50)], color='red')
+coordinates = [(0, 0, 0), (100, 0, 0), (100, 100, 0), (0, 100, 0)]
+display_file.add_polygon(coordinates, color='blue', filled=True)
+
 
 object_list = tk.Listbox(root)
-
-graphics_system = GraphicsSystem2D(root, display_file, object_list)
+graphics_system = GraphicsSystem3D(root, display_file, object_list)
 graphics_system.draw_display_file()
 
 root.mainloop()
