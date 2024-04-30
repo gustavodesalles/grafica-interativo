@@ -57,7 +57,7 @@ class DisplayFile3D:
 
     def add_polygon(self, coordinates, color='black', filled=False):
         try:
-            name = f'Polygon{len(self.objects) + 1}'
+            name = f'Polygon{self.counters["polygon"] + 1}'
             polygon = Polygon3D(coordinates, name, color, filled)
             self.objects[name] = polygon
             self.counters['polygon'] += 1

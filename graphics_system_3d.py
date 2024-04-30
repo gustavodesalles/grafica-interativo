@@ -325,8 +325,8 @@ class GraphicsSystem3D:
         self.clipping_method = self.var_clipping_method.get()
 
     def clip_point(self, x, y):
-        # Verificar se o ponto está dentro da viewport
-        return self.viewport.xmin <= x <= self.viewport.xmax and self.viewport.ymin <= y <= self.viewport.ymax
+        # Verificar se o ponto está dentro da window
+        return self.window.xmin <= x <= self.window.xmax and self.window.ymin <= y <= self.window.ymax
 
     def clip_line(self, x1, y1, x2, y2):
         if self.clipping_method == 'parametric':
@@ -602,13 +602,15 @@ class GraphicsSystem3D:
 
     def apply_transformation(self, obj, transformation_matrix):
         if obj.type == 'Point':
-            new_coordinates = np.dot(transformation_matrix, np.array([obj.coordinate_x, obj.coordinate_y, 1]))
+            new_coordinates = np.dot(transformation_matrix, np.array([obj.coordinate_x, obj.coordinate_y, obj.coordinate_z, 1]))
             obj.coordinate_x = new_coordinates[0]
             obj.coordinate_y = new_coordinates[1]
+            obj.coordinate_z = new_coordinates[2]
             new_coordinates_scn = np.dot(transformation_matrix,
-                                         np.array([obj.coordinate_x_scn, obj.coordinate_y_scn, 1]))
+                                         np.array([obj.coordinate_x_scn, obj.coordinate_y_scn, obj.coordinate_z_scn, 1]))
             obj.coordinate_x_scn = new_coordinates_scn[0]
             obj.coordinate_y_scn = new_coordinates_scn[1]
+            obj.coordinate_z_scn = new_coordinates_scn[2]
         elif obj.type == 'Line':
             obj.start_point = np.dot(transformation_matrix, np.array([obj.start_point[0], obj.start_point[1], 1]))
             obj.end_point = np.dot(transformation_matrix, np.array([obj.end_point[0], obj.end_point[1], 1]))
@@ -669,7 +671,11 @@ class GraphicsSystem3D:
 
     def draw_object_3d(self, obj, vrp, vpn):
         transformed_coords = self.orthogonal_projection(obj, vrp, vpn)
-        self.draw_polygon(transformed_coords, obj.color, obj.filled)
+        if transformed_coords is not None:
+            if obj.type == 'Point':
+                self.canvas.create_oval(transformed_coords[0], transformed_coords[1], transformed_coords[0] + 2, transformed_coords[1] + 2, fill=obj.color)
+            elif obj.type == 'Polygon':
+                self.draw_polygon(transformed_coords, obj.color, obj.filled)
 
     def draw_polygon(self, coordinates, color, filled):
         # Draw the polygon
@@ -797,6 +803,25 @@ class GraphicsSystem3D:
         rotation_matrix_x = Transformation3D.rotation_x(np.degrees(vpn_angle_y))
         rotation_matrix_y = Transformation3D.rotation_y(np.degrees(vpn_angle_x))
 
+        if obj.type == 'Polygon':
+            return self.project_orthogonal_polygon(obj, rotation_matrix_x, rotation_matrix_y, translation_matrix)
+        elif obj.type == 'Point':
+            return self.project_orthogonal_point(obj, rotation_matrix_x, rotation_matrix_y, translation_matrix)
+
+    def project_orthogonal_point(self, obj, rotation_matrix_x, rotation_matrix_y, translation_matrix):
+        # Ignore a coordenada Z
+        px, py, pz = obj.coordinate_x_scn, obj.coordinate_y_scn, obj.coordinate_z_scn
+        # Aplicar transformação
+        transformed_point = np.dot(translation_matrix,
+                                    np.dot(rotation_matrix_y, np.dot(rotation_matrix_x, [px, py, pz, 1])))
+        # Clipping
+        if self.clip_point(transformed_point[0], transformed_point[1]):
+            x, y = self.transform_to_viewport(transformed_point[0], transformed_point[1])
+            return x, y
+        else:
+            return None
+
+    def project_orthogonal_polygon(self, obj, rotation_matrix_x, rotation_matrix_y, translation_matrix):
         # 4. Ignorar todas as coordenadas Z dos objetos
         normalized_points = []
         for i in range(len(obj.segments)):
@@ -805,15 +830,15 @@ class GraphicsSystem3D:
             p1_x, p1_y, p1_z = p1.coordinate_x_scn, p1.coordinate_y_scn, p1.coordinate_z_scn
             p2_x, p2_y, p2_z = p2.coordinate_x_scn, p2.coordinate_y_scn, p2.coordinate_z_scn
             # Aplicar transformações
-            transformed_point1 = np.dot(translation_matrix, np.dot(rotation_matrix_y, np.dot(rotation_matrix_x, [p1_x, p1_y, p1_z, 1])))
-            transformed_point2 = np.dot(translation_matrix, np.dot(rotation_matrix_y, np.dot(rotation_matrix_x, [p2_x, p2_y, p2_z, 1])))
+            transformed_point1 = np.dot(translation_matrix,
+                                        np.dot(rotation_matrix_y, np.dot(rotation_matrix_x, [p1_x, p1_y, p1_z, 1])))
+            transformed_point2 = np.dot(translation_matrix,
+                                        np.dot(rotation_matrix_y, np.dot(rotation_matrix_x, [p2_x, p2_y, p2_z, 1])))
             normalized_points.append((transformed_point1[0], transformed_point1[1]))
             normalized_points.append((transformed_point2[0], transformed_point2[1]))
-
         # 5. Clippe
         # Algoritmo de clipping aqui, se necessário
         clipped_points = self.clip_polygon(normalized_points)
-
         if clipped_points:
             # 6. Transforme para coordenadas de Viewport
             viewport_points = []
@@ -825,10 +850,7 @@ class GraphicsSystem3D:
         else:
             return None  # Retorna None se o polígono estiver completamente fora da janela de visualização
 
-
-
-
-################################################################################
+    ################################################################################
 ############################### BASIC OPERATIONS ###############################
 ################################################################################
 
