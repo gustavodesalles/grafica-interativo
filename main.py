@@ -12,7 +12,7 @@ display_file = DisplayFile3D()
 # display_file.add_point((50, 50, 50), color='red')
 # display_file.add_line([(-50, -50, -50), (50, 50, 50)], color='red')
 coordinates = [(0, 0, 0), (100, 0, 0), (100, 100, 0), (0, 100, 0)]
-display_file.add_polygon(coordinates, color='blue', filled=True)
+display_file.add_polygon(coordinates, color='blue', filled=False)
 
 
 object_list = tk.Listbox(root)

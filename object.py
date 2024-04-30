@@ -1,10 +1,11 @@
 class Object:
-    def __init__(self, name, type, color):
+    def __init__(self, name, obj_type, color):
         self.name = name
-        self.type = type
+        self.type = obj_type
         self.color = color
 
 
 class Object3D(Object):
-    def __init__(self, segmentos=[]):
-        self.segmentos = segmentos # lista de segmentos de reta constituídos por um par de Pontos3D
+    def __init__(self, name, obj_type, color, segments=[]):
+        super().__init__(name, obj_type, color)
+        self.segments = segments

@@ -8,7 +8,7 @@ from polygon_3d import Polygon3D
 class DisplayFile3D:
     def __init__(self):
         self.objects = {}  # Dicionário para armazenar objetos
-        self.counters = {'point': 0, 'line': 0, 'wireframe': 0, 'curve': 0, 'b-spline': 0}  # Contadores para nomeação dos objetos
+        self.counters = {'point': 0, 'line': 0, 'wireframe': 0, 'curve': 0, 'b-spline': 0, 'polygon': 0}  # Contadores para nomeação dos objetos
 
     def add_point(self, coordinates, color='black'):
         try:
@@ -60,6 +60,7 @@ class DisplayFile3D:
             name = f'Polygon{len(self.objects) + 1}'
             polygon = Polygon3D(coordinates, name, color, filled)
             self.objects[name] = polygon
+            self.counters['polygon'] += 1
         except ValueError:
             print("Invalid coordinates")            
 

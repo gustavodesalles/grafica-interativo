@@ -1,4 +1,4 @@
-from object import Object, Object3D
+from object import Object
 
 
 class Point(Object):
@@ -10,11 +10,9 @@ class Point(Object):
         self.coordinate_y_scn = coordinate_y
 
 
-class Point3D(Object3D):
+class Point3D(Object):
     def __init__(self, coordinate_x, coordinate_y, coordinate_z, name, color):
-        self.name = name
-        self.type = 'Point'
-        self.color = color
+        super().__init__(name, 'Point', color)
         self.coordinate_x = coordinate_x
         self.coordinate_y = coordinate_y
         self.coordinate_z = coordinate_z

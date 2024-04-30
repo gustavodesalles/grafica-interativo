@@ -37,14 +37,12 @@ class GraphicsSystem3D:
 
         viewport_margin = 20
 
-        self.window = Window(0, 0, 0, canvas_width, canvas_height, canvas_depth)
+        self.window = Window(0, 0, canvas_width, canvas_height)
         self.viewport = Viewport(
             canvas_width // 4 + viewport_margin,
             canvas_height // 4 + viewport_margin,
-            canvas_depth // 4 + viewport_margin,
             3 * canvas_width // 4 - viewport_margin,
             3 * canvas_height // 4 - viewport_margin,
-            3 * canvas_depth // 4 - viewport_margin
         )
 
         self.viewport_frame = self.canvas.create_rectangle(self.viewport.xmin, self.viewport.ymin, self.viewport.xmax, self.viewport.ymax, outline='green')
@@ -310,15 +308,15 @@ class GraphicsSystem3D:
         y_rotated = x * sin_theta + y * cos_theta
         return x_rotated, y_rotated, z
 
-    def transform_to_viewport(self, x_rotated, y_rotated, z):
-        xmin, ymin, zmin, xmax, ymax, zmax = self.window.coordinates()
-        xvmin, yvmin, zvmin, xvmax, yvmax, zvmax = self.viewport.coordinates()
+    def transform_to_viewport(self, x_rotated, y_rotated):
+        xmin, ymin, xmax, ymax = self.window.coordinates()
+        xvmin, yvmin, xvmax, yvmax = self.viewport.coordinates()
 
         xv = ((x_rotated - xmin) / (xmax - xmin)) * (xvmax - xvmin) + xvmin
         yv = ((y_rotated - ymin) / (ymax - ymin)) * (yvmax - yvmin) + yvmin
-        zv = ((z - zmin) / (zmax - zmin)) * (zvmax - zvmin) + zvmin
+        # zv = ((z - zmin) / (zmax - zmin)) * (zvmax - zvmin) + zvmin
 
-        return xv, yv, zv
+        return xv, yv
 
     def change_clipping_method(self):
         self.clipping_method = self.var_clipping_method.get()
@@ -428,7 +426,7 @@ class GraphicsSystem3D:
         return code
 
     def clip_polygon(self, polygon):
-        output_list = polygon.point_list_scn.copy()
+        output_list = polygon.copy()
         edge_points = [
             (self.window.xmin, self.window.ymin),
             (self.window.xmax, self.window.ymin),
@@ -625,6 +623,18 @@ class GraphicsSystem3D:
                 point_scn = obj.point_list_scn[i]
                 point_vector_scn = np.dot(transformation_matrix, np.array([point_scn[0], point_scn[1], 1]))
                 obj.point_list_scn[i] = (point_vector_scn[0], point_vector_scn[1])
+        elif obj.type == 'Polygon':
+            for i in range(len(obj.coordinates)):
+                vertex = obj.coordinates[i]
+                vertex_vector = np.dot(transformation_matrix, np.array([vertex.coordinate_x, vertex.coordinate_y, vertex.coordinate_z, 1]))
+                obj.coordinates[i].coordinate_x = vertex_vector[0]
+                obj.coordinates[i].coordinate_y = vertex_vector[1]
+                obj.coordinates[i].coordinate_z = vertex_vector[2]
+                vertex_vector_scn = np.dot(transformation_matrix, np.array([vertex.coordinate_x_scn, vertex.coordinate_y_scn, vertex.coordinate_z_scn, 1]))
+                obj.coordinates[i].coordinate_x_scn = vertex_vector_scn[0]
+                obj.coordinates[i].coordinate_y_scn = vertex_vector_scn[1]
+                obj.coordinates[i].coordinate_z_scn = vertex_vector_scn[2]
+                # obj.coordinates[i] = (vertex_vector[0], vertex_vector[1], vertex[2])  # Include z-coordinate if 3D
 
     def draw_object(self, obj):
         if obj.type == 'Point':
@@ -759,7 +769,7 @@ class GraphicsSystem3D:
 
         # Redesenha as bordas
         self.viewport_border = self.canvas.create_rectangle(self.viewport.xmin, self.viewport.ymin, self.viewport.xmax, self.viewport.ymax, outline='red', dash=(5, 5))
-        self.window_border = self.canvas.create_rectangle(self.window.xmin, self.window.ymin, self.window.xmax, self.window.ymax, outline='blue')
+        # self.window_border = self.canvas.create_rectangle(self.window.xmin, self.window.ymin, self.window.xmax, self.window.ymax, outline='blue')
 
         # for obj in self.display_file.objects.values():
         #     self.draw_object(obj)
@@ -789,12 +799,16 @@ class GraphicsSystem3D:
 
         # 4. Ignorar todas as coordenadas Z dos objetos
         normalized_points = []
-        for point in obj.coordinates:
+        for i in range(len(obj.segments)):
             # Ignore a coordenada Z
-            x, y, z = point
+            p1, p2 = obj.segments[i]
+            p1_x, p1_y, p1_z = p1.coordinate_x_scn, p1.coordinate_y_scn, p1.coordinate_z_scn
+            p2_x, p2_y, p2_z = p2.coordinate_x_scn, p2.coordinate_y_scn, p2.coordinate_z_scn
             # Aplicar transformações
-            transformed_point = np.dot(translation_matrix, np.dot(rotation_matrix_y, np.dot(rotation_matrix_x, [x, y, z, 1])))
-            normalized_points.append((transformed_point[0], transformed_point[1]))
+            transformed_point1 = np.dot(translation_matrix, np.dot(rotation_matrix_y, np.dot(rotation_matrix_x, [p1_x, p1_y, p1_z, 1])))
+            transformed_point2 = np.dot(translation_matrix, np.dot(rotation_matrix_y, np.dot(rotation_matrix_x, [p2_x, p2_y, p2_z, 1])))
+            normalized_points.append((transformed_point1[0], transformed_point1[1]))
+            normalized_points.append((transformed_point2[0], transformed_point2[1]))
 
         # 5. Clippe
         # Algoritmo de clipping aqui, se necessário
@@ -805,7 +819,7 @@ class GraphicsSystem3D:
             viewport_points = []
             for point in clipped_points:
                 # Aplicar transformação para viewport chamando o método transform_to_viewport()
-                x, y, _ = self.transform_to_viewport(point[0], point[1], point[2])
+                x, y = self.transform_to_viewport(point[0], point[1])
                 viewport_points.append((x, y))
             return viewport_points
         else:
@@ -818,41 +832,41 @@ class GraphicsSystem3D:
 ############################### BASIC OPERATIONS ###############################
 ################################################################################
 
-    def pan(self, dx, dy, dz):
+    def pan(self, dx, dy):
         self.window.xmin += dx
         self.window.ymin += dy
-        self.window.zmin += dz
+        # self.window.zmin += dz
         self.window.xmax += dx
         self.window.ymax += dy
-        self.window.zmax += dz
+        # self.window.zmax += dz
 
     def pan_left(self):
-        self.pan(-20, 0, 0)
+        self.pan(-20, 0)
         self.draw_display_file()
 
     def pan_right(self):
-        self.pan(20, 0, 0)
+        self.pan(20, 0)
         self.draw_display_file()
 
     def pan_up(self):
-        self.pan(0, 20, 0)
+        self.pan(0, -20)
         self.draw_display_file()
 
     def pan_down(self):
-        self.pan(0, -20, 0)
+        self.pan(0, 20)
         self.draw_display_file()
 
     def zoom(self, factor):
         cx = (self.window.xmin + self.window.xmax) / 2
         cy = (self.window.ymin + self.window.ymax) / 2
-        cz = (self.window.zmin + self.window.zmax) / 2
+        # cz = (self.window.zmin + self.window.zmax) / 2
 
         self.window.xmin = cx - (cx - self.window.xmin) * factor
         self.window.ymin = cy - (cy - self.window.ymin) * factor
-        self.window.zmin = cz - (cz - self.window.zmin) * factor
+        # self.window.zmin = cz - (cz - self.window.zmin) * factor
         self.window.xmax = cx + (self.window.xmax - cx) * factor
         self.window.ymax = cy + (self.window.ymax - cy) * factor
-        self.window.zmax = cz + (self.window.zmax - cz) * factor
+        # self.window.zmax = cz + (self.window.zmax - cz) * factor
 
         self.draw_display_file()
 
