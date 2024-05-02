@@ -54,6 +54,10 @@ class GraphicsSystem3D:
         self.setup_object_list_interface()
         self.setup_basic_button()
         self.setup_transform_object_button()
+        # self.setup_rotation_object_button() - do we need this? 3D projection doesnt depend on Vup
+        self.setup_add_remove_object_button()
+        self.setup_export_object_button()
+        self.setup_import_object_button()
 
     def setup_object_list_interface(self):
         self.object_list_frame = tk.Frame(self.master, bg=self.frame_color)
@@ -78,6 +82,14 @@ class GraphicsSystem3D:
     def setup_rotation_object_button(self):
         rotate_button = tk.Button(self.master, text="Rotate Object", command=self.setup_rotation_interface)
         rotate_button.pack(side=tk.TOP, padx=10, pady=10)
+
+    def setup_export_object_button(self):
+        export_button = tk.Button(self.master, text="Export Object", command=self.setup_export_object_interface)
+        export_button.pack(side=tk.TOP, padx=10, pady=10)
+
+    def setup_import_object_button(self):
+        import_button = tk.Button(self.master, text="Import Object", command=self.setup_import_object_interface)
+        import_button.pack(side=tk.TOP, padx=10, pady=10)
 
     def setup_basic_interface(self):
         basic_window = tk.Toplevel(self.master)
@@ -133,7 +145,7 @@ class GraphicsSystem3D:
         # Example: entry for object type, entry for coordinates, color selection, etc.
         self.object_type = tk.StringVar()
         self.object_types_combobox = ttk.Combobox(add_object_frame, state="readonly", textvariable=self.object_type,
-                                                  values=['Point', 'Line', 'Wireframe', 'Curve', 'B-Spline'])
+                                                  values=['Point', 'Line', 'Wireframe', 'Curve', 'B-Spline', 'Polygon'])
         self.object_types_combobox.current(0)
         self.object_types_combobox.pack(pady=10)
 
@@ -489,11 +501,16 @@ class GraphicsSystem3D:
         try:
             with open(file_path, 'r') as f:
                 vertices = []
+                faces = []
                 lines = f.readlines()
                 for line in lines:
                     if line.startswith('v'):
-                        _, x, y, _ = line.split()
-                        vertices.append((float(x), float(y)))
+                        _, x, y, z = line.split()
+                        vertices.append((float(x), float(y), float(z)))
+                    elif line.startswith('f'):
+                        face = line.split()[1:]  # Ignorando 'f'
+                        face = [int(idx) for idx in face]
+                        faces.append(face)
 
                 type_index = self.get_index_with_substring(lines, '# Type:')
                 if type_index != -1:
@@ -526,6 +543,8 @@ class GraphicsSystem3D:
                     self.display_file.add_line(vertices, color)
                 elif type.upper() == 'WIREFRAME':
                     self.display_file.add_wireframe(vertices, color, filled)
+                elif type.upper() == 'POLYGON':
+                    self.display_file.add_polygon(vertices, color, filled, faces)
                 elif type.upper() == 'CURVE':
                     self.display_file.add_curve(vertices, color)
                 elif type.upper() == 'B-SPLINE':
@@ -543,14 +562,36 @@ class GraphicsSystem3D:
                 return i
         return -1
 
+
     def export_object(self):
         obj_name = self.entry_export_obj_name.get()
         if obj_name in self.display_file.objects:
             obj = self.display_file.objects[obj_name]
 
-            file_path = f"{obj_name}.obj"
-            OBJDescriptor.write_obj_file(file_path, obj)
-            print(f"Objeto '{obj_name}' exportado para '{file_path}'.")
+            if obj.type == 'Polygon':
+                file_path = f"{obj_name}.obj"
+                with open(file_path, 'w') as f:
+                    f.write("# Type: Polygon\n")
+                    f.write(f"# Color: {obj.color}\n")
+                    # Escreve os vértices
+                    for coordinate in obj.coordinates:
+                        f.write("v {} {} {}\n".format(coordinate.coordinate_x, coordinate.coordinate_x, coordinate.coordinate_x))
+
+                    
+                    # Escreve as faces
+                    for i in range(len(obj.coordinates)):
+                        # Obtém os índices dos vértices para formar uma face
+                        vertex_index_1 = i + 1
+                        vertex_index_2 = (i + 1) % len(obj.coordinates) + 1
+                        vertex_index_3 = (i + 2) % len(obj.coordinates) + 1
+                        
+                        # Escreve a linha de face no arquivo .obj
+                        f.write("f {} {} {}\n".format(vertex_index_1, vertex_index_2, vertex_index_3))
+
+
+                print(f"Objeto '{obj_name}' exportado para '{file_path}'.")
+            else:
+                print("Apenas objetos do tipo Polygon3D podem ser exportados.")
         else:
             print(f"O objeto '{obj_name}' não existe na lista de objetos.")
 
@@ -850,6 +891,49 @@ class GraphicsSystem3D:
         else:
             return None  # Retorna None se o polígono estiver completamente fora da janela de visualização
 
+
+    def perspective_projection(self, obj, cop):
+        # 1. Translade COP para a origem
+        translation_matrix = Transformation3D.translation(-cop[0], -cop[1], -cop[2])
+
+        # 2. Determine os ângulos de VPN com X e Y
+        vpn_angle_x = ...
+        vpn_angle_y = ...
+
+        # 3. Rotacione o mundo em torno de X e Y para alinhar VPN com o eixo Z
+        rotation_matrix_x = Transformation3D.rotation_x(np.degrees(vpn_angle_y))
+        rotation_matrix_y = Transformation3D.rotation_y(np.degrees(vpn_angle_x))
+
+        # 4. Projete, calculando xp e yp
+        projected_points = []
+        for point in obj.points:
+            # Apply transformations
+            transformed_point = np.dot(translation_matrix, np.dot(rotation_matrix_y, np.dot(rotation_matrix_x, [point[0], point[1], point[2], 1])))
+            xp = ...  # Calculate xp
+            yp = ...  # Calculate yp
+            projected_points.append((xp, yp))
+
+        # 5. Normalize xp e yp (coordenadas de window)
+        normalized_points = []
+        for point in projected_points:
+            # Normalize points
+            x_normalized = ...
+            y_normalized = ...
+            normalized_points.append((x_normalized, y_normalized))
+
+        # 6. Clippe 2D
+        clipped_points = self.clip_polygon(normalized_points)
+
+        # 7. Transforme para coordenadas de Viewport
+        viewport_points = []
+        for point in clipped_points:
+            # Transform to viewport coordinates
+            x, y, _ = self.transform_to_viewport(point[0], point[1], 0)  # Assuming z = 0 for viewport coordinates
+            viewport_points.append((x, y))
+
+        return viewport_points
+
+
     ################################################################################
 ############################### BASIC OPERATIONS ###############################
 ################################################################################
@@ -908,7 +992,7 @@ class GraphicsSystem3D:
             coordinates = coordinates_str.replace("(", "").replace(")", "").split(",")
             coordinates_head = self.object_type.get()
             coordinates = list(map(lambda x: float(x), coordinates))
-            
+
             if coordinates_head.upper() == "POINT":
                 self.display_file.add_point((coordinates[0], coordinates[1], coordinates[2]), object_color)
             elif coordinates_head.upper() == "LINE":
@@ -919,6 +1003,8 @@ class GraphicsSystem3D:
                 self.display_file.add_curve([(coordinates[i], coordinates[i + 1], coordinates[i + 2]) for i in range(0, len(coordinates), 3)], object_color)
             elif coordinates_head.upper() == "B-SPLINE":
                 self.display_file.add_b_spline([(coordinates[i], coordinates[i + 1], coordinates[i + 2]) for i in range(0, len(coordinates), 3)], object_color)
+            elif coordinates_head.upper() == "POLYGON":
+                self.display_file.add_polygon([(coordinates[i], coordinates[i + 1], coordinates[i + 2]) for i in range(0, len(coordinates), 3)], object_color, filled)
             else:
                 print("Unable to add object")
             self.draw_display_file()
@@ -926,6 +1012,7 @@ class GraphicsSystem3D:
             print("Insufficient coordinates")
         except ValueError:
             print("Invalid coordinates")
+
 
 
     def remove_object(self):
