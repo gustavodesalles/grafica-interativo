@@ -451,6 +451,8 @@ class GraphicsSystem3D:
         for edge in edges:
             input_list = output_list
             output_list = []
+            if len(input_list) == 0:
+                return output_list
             p1 = input_list[-1]
 
             for p2 in input_list:
@@ -501,16 +503,16 @@ class GraphicsSystem3D:
         try:
             with open(file_path, 'r') as f:
                 vertices = []
-                faces = []
+                segments = []
                 lines = f.readlines()
                 for line in lines:
                     if line.startswith('v'):
                         _, x, y, z = line.split()
                         vertices.append((float(x), float(y), float(z)))
-                    elif line.startswith('f'):
-                        face = line.split()[1:]  # Ignorando 'f'
-                        face = [int(idx) for idx in face]
-                        faces.append(face)
+                    elif line.startswith('l'):
+                        segment = line.split()[1:]  # Ignorando 'l'
+                        segment = [int(idx) for idx in segment]
+                        segments.append(segment)
 
                 type_index = self.get_index_with_substring(lines, '# Type:')
                 if type_index != -1:
@@ -544,7 +546,7 @@ class GraphicsSystem3D:
                 elif type.upper() == 'WIREFRAME':
                     self.display_file.add_wireframe(vertices, color, filled)
                 elif type.upper() == 'POLYGON':
-                    self.display_file.add_polygon(vertices, color, filled, faces)
+                    self.display_file.add_polygon(vertices, color, segments)
                 elif type.upper() == 'CURVE':
                     self.display_file.add_curve(vertices, color)
                 elif type.upper() == 'B-SPLINE':
@@ -573,21 +575,19 @@ class GraphicsSystem3D:
                 with open(file_path, 'w') as f:
                     f.write("# Type: Polygon\n")
                     f.write(f"# Color: {obj.color}\n")
+                    f.write(f"# Filled: {obj.filled}\n")
                     # Escreve os vértices
                     for coordinate in obj.coordinates:
-                        f.write("v {} {} {}\n".format(coordinate.coordinate_x, coordinate.coordinate_x, coordinate.coordinate_x))
+                        f.write("v {} {} {}\n".format(coordinate.coordinate_x, coordinate.coordinate_y, coordinate.coordinate_z))
 
-                    
                     # Escreve as faces
                     for i in range(len(obj.coordinates)):
                         # Obtém os índices dos vértices para formar uma face
                         vertex_index_1 = i + 1
                         vertex_index_2 = (i + 1) % len(obj.coordinates) + 1
-                        vertex_index_3 = (i + 2) % len(obj.coordinates) + 1
                         
                         # Escreve a linha de face no arquivo .obj
-                        f.write("f {} {} {}\n".format(vertex_index_1, vertex_index_2, vertex_index_3))
-
+                        f.write("l {} {}\n".format(vertex_index_1, vertex_index_2))
 
                 print(f"Objeto '{obj_name}' exportado para '{file_path}'.")
             else:
@@ -716,11 +716,11 @@ class GraphicsSystem3D:
             if obj.type == 'Point':
                 self.canvas.create_oval(transformed_coords[0], transformed_coords[1], transformed_coords[0] + 2, transformed_coords[1] + 2, fill=obj.color)
             elif obj.type == 'Polygon':
-                self.draw_polygon(transformed_coords, obj.color, obj.filled)
+                self.draw_polygon(transformed_coords, obj.color)
 
-    def draw_polygon(self, coordinates, color, filled):
+    def draw_polygon(self, coordinates, color):
         # Draw the polygon
-        self.canvas.create_polygon(coordinates, fill=color if filled else '', outline=color)    
+        self.canvas.create_polygon(coordinates, outline=color, fill='') #TODO: talvez mudar para desenhar linhas com base nos segmentos
 
     def draw_wireframe(self, coordinates, color, filled):
         # Desenhar as linhas do polígono
@@ -891,7 +891,6 @@ class GraphicsSystem3D:
         else:
             return None  # Retorna None se o polígono estiver completamente fora da janela de visualização
 
-
     def perspective_projection(self, obj, cop):
         # 1. Translade COP para a origem
         translation_matrix = Transformation3D.translation(-cop[0], -cop[1], -cop[2])
@@ -928,7 +927,7 @@ class GraphicsSystem3D:
         viewport_points = []
         for point in clipped_points:
             # Transform to viewport coordinates
-            x, y, _ = self.transform_to_viewport(point[0], point[1], 0)  # Assuming z = 0 for viewport coordinates
+            x, y = self.transform_to_viewport(point[0], point[1])  # Assuming z = 0 for viewport coordinates
             viewport_points.append((x, y))
 
         return viewport_points
@@ -1004,7 +1003,7 @@ class GraphicsSystem3D:
             elif coordinates_head.upper() == "B-SPLINE":
                 self.display_file.add_b_spline([(coordinates[i], coordinates[i + 1], coordinates[i + 2]) for i in range(0, len(coordinates), 3)], object_color)
             elif coordinates_head.upper() == "POLYGON":
-                self.display_file.add_polygon([(coordinates[i], coordinates[i + 1], coordinates[i + 2]) for i in range(0, len(coordinates), 3)], object_color, filled)
+                self.display_file.add_polygon([(coordinates[i], coordinates[i + 1], coordinates[i + 2]) for i in range(0, len(coordinates), 3)], object_color)
             else:
                 print("Unable to add object")
             self.draw_display_file()

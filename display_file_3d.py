@@ -55,10 +55,10 @@ class DisplayFile3D:
         except ValueError:
             print("Invalid coordinates")
 
-    def add_polygon(self, coordinates, color='black', filled=False, faces=None):
+    def add_polygon(self, coordinates, color='black', segments=None):
         try:
             name = f'Polygon{self.counters["polygon"] + 1}'
-            polygon = Polygon3D(coordinates, name, color, filled, faces)
+            polygon = Polygon3D(coordinates, name, color, segments)
             self.objects[name] = polygon
             self.counters['polygon'] += 1
         except ValueError:
