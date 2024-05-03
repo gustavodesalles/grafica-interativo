@@ -145,7 +145,7 @@ class GraphicsSystem3D:
         # Example: entry for object type, entry for coordinates, color selection, etc.
         self.object_type = tk.StringVar()
         self.object_types_combobox = ttk.Combobox(add_object_frame, state="readonly", textvariable=self.object_type,
-                                                  values=['Point', 'Line', 'Wireframe', 'Curve', 'B-Spline', 'Polygon'])
+                                                  values=['Point', 'Polygon'])
         self.object_types_combobox.current(0)
         self.object_types_combobox.pack(pady=10)
 
@@ -618,6 +618,10 @@ class GraphicsSystem3D:
         elif transformation == 'rotation_z':
             angle = float(transformation_params[0])
             transformation_matrix = Transformation3D.rotation_z(angle)
+        elif transformation == 'center_rotation':
+            angle = float(transformation_params[0])
+            center = self.get_object_center(obj)
+            transformation_matrix = Transformation3D.arbitrary_rotation_z(angle, center)
         elif transformation == 'scaling':
             sx, sy, sz = map(float, transformation_params)
             center = self.get_object_center(obj)
@@ -720,7 +724,7 @@ class GraphicsSystem3D:
 
     def draw_polygon(self, coordinates, color):
         # Draw the polygon
-        self.canvas.create_polygon(coordinates, outline=color, fill='') #TODO: talvez mudar para desenhar linhas com base nos segmentos
+        self.canvas.create_polygon(coordinates, outline=color, fill='')
 
     def draw_wireframe(self, coordinates, color, filled):
         # Desenhar as linhas do polígono
@@ -1031,5 +1035,10 @@ class GraphicsSystem3D:
             center_x = sum([p[0] for p in obj.point_list]) / len(obj.point_list)
             center_y = sum([p[1] for p in obj.point_list]) / len(obj.point_list)
             center_z = sum([p[2] for p in obj.point_list]) / len(obj.point_list)
+            return center_x, center_y, center_z
+        elif obj.type == "Polygon":
+            center_x = sum([p.coordinate_x for p in obj.coordinates]) / len(obj.coordinates)
+            center_y = sum([p.coordinate_y for p in obj.coordinates]) / len(obj.coordinates)
+            center_z = sum([p.coordinate_z for p in obj.coordinates]) / len(obj.coordinates)
             return center_x, center_y, center_z
 
