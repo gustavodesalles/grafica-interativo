@@ -602,9 +602,13 @@ class GraphicsSystem3D:
             return
 
         transformation = self.entry_transformation.get().lower()
-        transformation_params = self.entry_params.get().split(',')
+        transformation_params = self.entry_params.get().split(',')[0:3]
         transformation_matrix = None
         obj = self.display_file.objects[obj_name]
+
+        if len(transformation_params) < 3:
+            print("Insufficient values")
+            return
 
         if transformation == 'translation':
             tx, ty, tz = map(float, transformation_params)
