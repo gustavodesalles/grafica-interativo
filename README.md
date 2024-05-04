@@ -10,17 +10,16 @@ Campo Object Name
 - Utilizar nome do objeto de acordo com a Object List
 
 Campo Params
-- Translação: x,y
+- Translação: x,y,z
 - Rotação: ângulo
-- Escalonamento: x,y
-- Rotação arbitrária: ângulo,x,y
+- Escalonamento: x,y,z
+- Rotação arbitrária: ângulo,x,y,z
 
 Padrões para "add object"
 
 Campo Coordinates
-- Ponto: "point,x,y"
-- Reta: "line,x1,y1,x2,y2"
-- Wireframe: "wireframe,x1,y1,x2,y2,...,xn,yn"
+- Ponto: "x,y,z"
+- Polígono: "x1,y1,z1,x2,y2,z2,...,xn,yn,zn"
 
 Rotação da window: inserir apenas o número do ângulo (em graus)
 

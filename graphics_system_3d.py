@@ -517,6 +517,9 @@ class GraphicsSystem3D:
                 type_index = self.get_index_with_substring(lines, '# Type:')
                 if type_index != -1:
                     type = lines[type_index].split(":")[1].strip()
+                    if type not in ["Point", "Polygon"]:
+                        print(f"Arquivo {file_path} possui tipo inválido.")
+                        return
                 else:
                     raise ValueError
 
@@ -541,16 +544,16 @@ class GraphicsSystem3D:
 
                 if type.upper() == 'POINT':
                     self.display_file.add_point(vertices[0], color)
-                elif type.upper() == 'LINE':
-                    self.display_file.add_line(vertices, color)
-                elif type.upper() == 'WIREFRAME':
-                    self.display_file.add_wireframe(vertices, color, filled)
+                # elif type.upper() == 'LINE':
+                #     self.display_file.add_line(vertices, color)
+                # elif type.upper() == 'WIREFRAME':
+                #     self.display_file.add_wireframe(vertices, color, filled)
                 elif type.upper() == 'POLYGON':
                     self.display_file.add_polygon(vertices, color, segments)
-                elif type.upper() == 'CURVE':
-                    self.display_file.add_curve(vertices, color)
-                elif type.upper() == 'B-SPLINE':
-                    self.display_file.add_b_spline(vertices, color)
+                # elif type.upper() == 'CURVE':
+                #     self.display_file.add_curve(vertices, color)
+                # elif type.upper() == 'B-SPLINE':
+                #     self.display_file.add_b_spline(vertices, color)
                 self.draw_display_file()
                 print(f"Objeto importado de '{file_path}'.")
         except FileNotFoundError:
@@ -575,19 +578,15 @@ class GraphicsSystem3D:
                 with open(file_path, 'w') as f:
                     f.write("# Type: Polygon\n")
                     f.write(f"# Color: {obj.color}\n")
-                    f.write(f"# Filled: {obj.filled}\n")
                     # Escreve os vértices
                     for coordinate in obj.coordinates:
                         f.write("v {} {} {}\n".format(coordinate.coordinate_x, coordinate.coordinate_y, coordinate.coordinate_z))
 
                     # Escreve as faces
-                    for i in range(len(obj.coordinates)):
-                        # Obtém os índices dos vértices para formar uma face
-                        vertex_index_1 = i + 1
-                        vertex_index_2 = (i + 1) % len(obj.coordinates) + 1
-                        
+                    for i in obj.segments:
                         # Escreve a linha de face no arquivo .obj
-                        f.write("l {} {}\n".format(vertex_index_1, vertex_index_2))
+                        f.write("l {} {}\n".format(obj.coordinates.index(i[0]) + 1,
+                                                         obj.coordinates.index(i[1]) + 1))
 
                 print(f"Objeto '{obj_name}' exportado para '{file_path}'.")
             else:
@@ -602,46 +601,45 @@ class GraphicsSystem3D:
             return
 
         transformation = self.entry_transformation.get().lower()
-        transformation_params = self.entry_params.get().split(',')[0:3]
+        transformation_params = self.entry_params.get().split(',')
         transformation_matrix = None
         obj = self.display_file.objects[obj_name]
 
-        if len(transformation_params) < 3:
-            print("Insufficient values")
-            return
-
-        if transformation == 'translation':
-            tx, ty, tz = map(float, transformation_params)
-            transformation_matrix = Transformation3D.translation(tx, ty, tz)
-        elif transformation == 'rotation_x':
-            angle = float(transformation_params[0])
-            transformation_matrix = Transformation3D.rotation_x(angle)
-        elif transformation == 'rotation_y':
-            angle = float(transformation_params[0])
-            transformation_matrix = Transformation3D.rotation_y(angle)
-        elif transformation == 'rotation_z':
-            angle = float(transformation_params[0])
-            transformation_matrix = Transformation3D.rotation_z(angle)
-        elif transformation == 'center_rotation':
-            angle = float(transformation_params[0])
-            center = self.get_object_center(obj)
-            transformation_matrix = Transformation3D.arbitrary_rotation_z(angle, center)
-        elif transformation == 'scaling':
-            sx, sy, sz = map(float, transformation_params)
-            center = self.get_object_center(obj)
-            transformation_matrix = Transformation3D.scale(sx, sy, sz, center)
-        elif transformation == 'arbitrary_rotation_x':
-            angle = float(transformation_params[0])
-            center = tuple(map(float, transformation_params[1:]))
-            transformation_matrix = Transformation3D.arbitrary_rotation_x(angle, center)
-        elif transformation == 'arbitrary_rotation_y':
-            angle = float(transformation_params[0])
-            center = tuple(map(float, transformation_params[1:]))
-            transformation_matrix = Transformation3D.arbitrary_rotation_y(angle, center)
-        elif transformation == 'arbitrary_rotation_z':
-            angle = float(transformation_params[0])
-            center = tuple(map(float, transformation_params[1:]))
-            transformation_matrix = Transformation3D.arbitrary_rotation_z(angle, center)
+        try:
+            if transformation == 'translation':
+                tx, ty, tz = map(float, transformation_params)
+                transformation_matrix = Transformation3D.translation(tx, ty, tz)
+            elif transformation == 'rotation_x':
+                angle = float(transformation_params[0])
+                transformation_matrix = Transformation3D.rotation_x(angle)
+            elif transformation == 'rotation_y':
+                angle = float(transformation_params[0])
+                transformation_matrix = Transformation3D.rotation_y(angle)
+            elif transformation == 'rotation_z':
+                angle = float(transformation_params[0])
+                transformation_matrix = Transformation3D.rotation_z(angle)
+            elif transformation == 'center_rotation':
+                angle = float(transformation_params[0])
+                center = self.get_object_center(obj)
+                transformation_matrix = Transformation3D.arbitrary_rotation_z(angle, center)
+            elif transformation == 'scaling':
+                sx, sy, sz = map(float, transformation_params)
+                center = self.get_object_center(obj)
+                transformation_matrix = Transformation3D.scale(sx, sy, sz, center)
+            elif transformation == 'arbitrary_rotation_x':
+                angle = float(transformation_params[0])
+                center = tuple(map(float, transformation_params[1:]))
+                transformation_matrix = Transformation3D.arbitrary_rotation_x(angle, center)
+            elif transformation == 'arbitrary_rotation_y':
+                angle = float(transformation_params[0])
+                center = tuple(map(float, transformation_params[1:]))
+                transformation_matrix = Transformation3D.arbitrary_rotation_y(angle, center)
+            elif transformation == 'arbitrary_rotation_z':
+                angle = float(transformation_params[0])
+                center = tuple(map(float, transformation_params[1:]))
+                transformation_matrix = Transformation3D.arbitrary_rotation_z(angle, center)
+        except ValueError:
+            print('Invalid value(s)')
 
         if transformation_matrix is not None:
             self.apply_transformation(obj, transformation_matrix)
