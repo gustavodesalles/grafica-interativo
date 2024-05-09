@@ -11,8 +11,8 @@ display_file = DisplayFile3D()
 # Exemplo de adicionar objetos
 # display_file.add_point((50, 50, 50), color='red')
 #display_file.add_line([(-50, -50, -50), (50, 50, 50)], color='red')
-# coordinates = [(0, 0, 0), (100, 0, 0), (100, 100, 0), (0, 100, 0), (0, 0, 100), (100, 0, 100), (100, 100, 100), (0, 100, 100)]
-# display_file.add_polygon(coordinates, color='blue')
+coordinates = [(0, 0, 0), (100, 0, 0), (100, 100, 0), (0, 100, 0), (0, 0, 100), (100, 0, 100), (100, 100, 100), (0, 100, 100)]
+display_file.add_polygon(coordinates, color='blue')
 
 
 object_list = tk.Listbox(root)

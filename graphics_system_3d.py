@@ -48,6 +48,8 @@ class GraphicsSystem3D:
         self.viewport_frame = self.canvas.create_rectangle(self.viewport.xmin, self.viewport.ymin, self.viewport.xmax, self.viewport.ymax, outline='green')
 
         self.clipping_method = 'parametric'
+        # self.projection_type = 'orthographic'
+        self.projection_type = 'perspective'
 
         self.angle_vup = 0
 
@@ -716,8 +718,12 @@ class GraphicsSystem3D:
             elif obj.type == 'B-Spline' and len(transformed_coords) > 3:
                 self.calculate_b_spline(transformed_coords, obj.color)
 
-    def draw_object_3d(self, obj, vrp, vpn):
-        transformed_coords = self.orthogonal_projection(obj, vrp, vpn)
+    def draw_object_3d(self, obj, vrp, vpn, cop):
+        transformed_coords = None
+        if self.projection_type == 'orthographic':
+            transformed_coords = self.orthogonal_projection(obj, vrp, vpn)
+        elif self.projection_type == 'perspective':
+            transformed_coords = self.perspective_projection(obj, cop, vpn)
         if transformed_coords is not None:
             if obj.type == 'Point':
                 self.canvas.create_oval(transformed_coords[0], transformed_coords[1], transformed_coords[0] + 2, transformed_coords[1] + 2, fill=obj.color)
@@ -829,9 +835,10 @@ class GraphicsSystem3D:
 
         vrp = (0,0,0)
         vpn = (0,0,0)
+        cop = (0,0,1)
 
         for obj in self.display_file.objects.values():
-            self.draw_object_3d(obj, vrp, vpn)
+            self.draw_object_3d(obj, vrp, vpn, cop)
 
         # Atualizar a lista de objetos
         object_names = "\n".join(self.display_file.objects.keys())
@@ -897,13 +904,13 @@ class GraphicsSystem3D:
         else:
             return None  # Retorna None se o polígono estiver completamente fora da janela de visualização
 
-    def perspective_projection(self, obj, cop):
+    def perspective_projection(self, obj, cop, vpn):
         # 1. Translade COP para a origem
         translation_matrix = Transformation3D.translation(-cop[0], -cop[1], -cop[2])
 
         # 2. Determine os ângulos de VPN com X e Y
-        vpn_angle_x = ...
-        vpn_angle_y = ...
+        vpn_angle_x = np.arctan2(vpn[1], vpn[0])
+        vpn_angle_y = np.arctan2(np.sqrt(vpn[0] ** 2 + vpn[1] ** 2), vpn[2])
 
         # 3. Rotacione o mundo em torno de X e Y para alinhar VPN com o eixo Z
         rotation_matrix_x = Transformation3D.rotation_x(np.degrees(vpn_angle_y))
@@ -911,33 +918,38 @@ class GraphicsSystem3D:
 
         # 4. Projete, calculando xp e yp
         projected_points = []
-        for point in obj.points:
-            # Apply transformations
-            transformed_point = np.dot(translation_matrix, np.dot(rotation_matrix_y, np.dot(rotation_matrix_x, [point[0], point[1], point[2], 1])))
-            xp = ...  # Calculate xp
-            yp = ...  # Calculate yp
-            projected_points.append((xp, yp))
+        for segment in obj.segments:
+            for point in segment: # Apply transformations
+                px, py, pz = point.coordinate_x_scn, point.coordinate_y_scn, point.coordinate_z_scn
+                d = pz - cop[2]
+                transform_matrix = np.array([[1, 0, 0, 0],[0, 1, 0, 0],[0, 0, 0, 0],[0, 0, (1/d), 1]])
+                transformed_point = np.dot(transform_matrix, [px, py, pz, 1])
+                xp = transformed_point[0] / transformed_point[3]  # Calculate xp
+                yp = transformed_point[1] / transformed_point[3]  # Calculate yp
+                projected_points.append((xp, yp, 0))
 
         # 5. Normalize xp e yp (coordenadas de window)
         normalized_points = []
         for point in projected_points:
             # Normalize points
-            x_normalized = ...
-            y_normalized = ...
-            normalized_points.append((x_normalized, y_normalized))
+            transformed_point = np.dot(translation_matrix, np.dot(rotation_matrix_y, np.dot(rotation_matrix_x, [point[0], point[1], point[2], 1])))
+            # x_normalized = ...
+            # y_normalized = ...
+            normalized_points.append((transformed_point[0], transformed_point[1]))
 
         # 6. Clippe 2D
         clipped_points = self.clip_polygon(normalized_points)
 
         # 7. Transforme para coordenadas de Viewport
-        viewport_points = []
-        for point in clipped_points:
-            # Transform to viewport coordinates
-            x, y = self.transform_to_viewport(point[0], point[1])  # Assuming z = 0 for viewport coordinates
-            viewport_points.append((x, y))
-
-        return viewport_points
-
+        if clipped_points:
+            viewport_points = []
+            for point in clipped_points:
+                # Transform to viewport coordinates
+                x, y = self.transform_to_viewport(point[0], point[1])  # Assuming z = 0 for viewport coordinates
+                viewport_points.append((x, y))
+            return viewport_points
+        else:
+            return None
 
     ################################################################################
 ############################### BASIC OPERATIONS ###############################
