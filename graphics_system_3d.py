@@ -58,6 +58,7 @@ class GraphicsSystem3D:
         self.setup_transform_object_button()
         # self.setup_rotation_object_button() - do we need this? 3D projection doesnt depend on Vup
         self.setup_add_remove_object_button()
+        self.setup_projection_options()
         self.setup_export_object_button()
         self.setup_import_object_button()
 
@@ -80,6 +81,24 @@ class GraphicsSystem3D:
     def setup_transform_object_button(self):
         transform_button = tk.Button(self.master, text="Transform Object", command=self.setup_transformation_interface)
         transform_button.pack(side=tk.TOP, padx=10, pady=10)
+
+    def setup_projection_options(self):
+        self.label_clipping_method = tk.Label(self.master, text="Projection", bg=self.frame_color,
+                                              fg=self.label_color)
+        self.label_clipping_method.pack()
+
+        self.var_projection_type = tk.StringVar()
+        self.var_projection_type.set(self.projection_type)
+
+        self.radio_orthographic = tk.Radiobutton(self.master, text="Orthographic",
+                                               variable=self.var_projection_type, value='orthographic',
+                                               command=self.change_projection_type, bg=self.frame_color)
+        self.radio_orthographic.pack()
+
+        self.radio_perspective = tk.Radiobutton(self.master, text="Perspective",
+                                                     variable=self.var_projection_type, value='perspective',
+                                                     command=self.change_projection_type, bg=self.frame_color)
+        self.radio_perspective.pack()
 
     def setup_rotation_object_button(self):
         rotate_button = tk.Button(self.master, text="Rotate Object", command=self.setup_rotation_interface)
@@ -206,13 +225,17 @@ class GraphicsSystem3D:
                                 variable=self.entry_transformation, bg=self.frame_color)
         self.r5 = tk.Radiobutton(transform_frame, text="Rotation around origin (Z)", value="rotation_z",
                                 variable=self.entry_transformation, bg=self.frame_color)
-        self.r6 = tk.Radiobutton(transform_frame, text="Rotation around object's center", value="center_rotation",
+        self.r6 = tk.Radiobutton(transform_frame, text="Rotation around object's center (X)", value="center_rotation_x",
                                 variable=self.entry_transformation, bg=self.frame_color)
-        self.r7 = tk.Radiobutton(transform_frame, text="Arbitrary rotation (X)", value="arbitrary_rotation_x",
+        self.r7 = tk.Radiobutton(transform_frame, text="Rotation around object's center (Y)", value="center_rotation_y",
                                 variable=self.entry_transformation, bg=self.frame_color)
-        self.r8 = tk.Radiobutton(transform_frame, text="Arbitrary rotation (Y)", value="arbitrary_rotation_y",
+        self.r8 = tk.Radiobutton(transform_frame, text="Rotation around object's center (Z)", value="center_rotation_z",
                                 variable=self.entry_transformation, bg=self.frame_color)
-        self.r9 = tk.Radiobutton(transform_frame, text="Arbitrary rotation (Z)", value="arbitrary_rotation_z",
+        self.r9 = tk.Radiobutton(transform_frame, text="Arbitrary rotation (X)", value="arbitrary_rotation_x",
+                                variable=self.entry_transformation, bg=self.frame_color)
+        self.r10 = tk.Radiobutton(transform_frame, text="Arbitrary rotation (Y)", value="arbitrary_rotation_y",
+                                variable=self.entry_transformation, bg=self.frame_color)
+        self.r11 = tk.Radiobutton(transform_frame, text="Arbitrary rotation (Z)", value="arbitrary_rotation_z",
                                 variable=self.entry_transformation, bg=self.frame_color)
         self.r1.grid(row=1, column=0, sticky="w")
         self.r2.grid(row=2, column=0, sticky="w")
@@ -223,21 +246,23 @@ class GraphicsSystem3D:
         self.r7.grid(row=7, column=0, sticky="w")
         self.r8.grid(row=8, column=0, sticky="w")
         self.r9.grid(row=9, column=0, sticky="w")
+        self.r10.grid(row=10, column=0, sticky="w")
+        self.r11.grid(row=11, column=0, sticky="w")
 
         self.label_object_name = tk.Label(transform_frame, text="Object Name:", bg=self.frame_color, fg=self.label_color)
-        self.label_object_name.grid(row=10, column=0, padx=5, pady=5, sticky="w")
+        self.label_object_name.grid(row=12, column=0, padx=5, pady=5, sticky="w")
 
         self.entry_object_name_transform = tk.Entry(transform_frame)
-        self.entry_object_name_transform.grid(row=10, column=1, padx=5, pady=5, sticky="w")
+        self.entry_object_name_transform.grid(row=12, column=1, padx=5, pady=5, sticky="w")
 
         self.label_params = tk.Label(transform_frame, text="Params (comma separated)", bg=self.frame_color, fg=self.label_color)
-        self.label_params.grid(row=11, column=0, padx=5, pady=5, sticky="w")
+        self.label_params.grid(row=13, column=0, padx=5, pady=5, sticky="w")
 
         self.entry_params = tk.Entry(transform_frame)
-        self.entry_params.grid(row=11, column=1, padx=5, pady=5, sticky="w")
+        self.entry_params.grid(row=13, column=1, padx=5, pady=5, sticky="w")
 
         self.button_transform = tk.Button(transform_frame, text="Transform Object", command=self.transform_object, bg=self.button_color)
-        self.button_transform.grid(row=12, column=0, columnspan=2, padx=5, pady=5)
+        self.button_transform.grid(row=14, column=0, columnspan=2, padx=5, pady=5)
 
 
     def setup_rotation_interface(self):
@@ -335,8 +360,9 @@ class GraphicsSystem3D:
     def change_clipping_method(self):
         self.clipping_method = self.var_clipping_method.get()
 
-    def change_clipping_method(self):
-        self.clipping_method = self.var_clipping_method.get()
+    def change_projection_type(self):
+        self.projection_type = self.var_projection_type.get()
+        self.draw_display_file()
 
     def clip_point(self, x, y):
         # Verificar se o ponto está dentro da window
@@ -620,7 +646,15 @@ class GraphicsSystem3D:
             elif transformation == 'rotation_z':
                 angle = float(transformation_params[0])
                 transformation_matrix = Transformation3D.rotation_z(angle)
-            elif transformation == 'center_rotation':
+            elif transformation == 'center_rotation_x':
+                angle = float(transformation_params[0])
+                center = self.get_object_center(obj)
+                transformation_matrix = Transformation3D.arbitrary_rotation_x(angle, center)
+            elif transformation == 'center_rotation_y':
+                angle = float(transformation_params[0])
+                center = self.get_object_center(obj)
+                transformation_matrix = Transformation3D.arbitrary_rotation_y(angle, center)
+            elif transformation == 'center_rotation_z':
                 angle = float(transformation_params[0])
                 center = self.get_object_center(obj)
                 transformation_matrix = Transformation3D.arbitrary_rotation_z(angle, center)
@@ -916,30 +950,51 @@ class GraphicsSystem3D:
         rotation_matrix_x = Transformation3D.rotation_x(np.degrees(vpn_angle_y))
         rotation_matrix_y = Transformation3D.rotation_y(np.degrees(vpn_angle_x))
 
+        if obj.type == 'Polygon':
+            return self.project_perspective_polygon(cop, obj, rotation_matrix_x, rotation_matrix_y, translation_matrix)
+        elif obj.type == 'Point':
+            return self.project_perspective_point(cop, obj, rotation_matrix_x, rotation_matrix_y, translation_matrix)
+
+    def project_perspective_point(self, cop, obj, rotation_matrix_x, rotation_matrix_y, translation_matrix):
+        px, py, pz = obj.coordinate_x_scn, obj.coordinate_y_scn, obj.coordinate_z_scn
+        d = pz - cop[2]
+        transform_matrix = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0], [0, 0, (1 / d), 1]])
+        transformed_point = np.dot(transform_matrix, [px, py, pz, 1])
+        xp = transformed_point[0] / transformed_point[3]
+        yp = transformed_point[1] / transformed_point[3]
+        normalized_point = np.dot(translation_matrix, np.dot(rotation_matrix_y, np.dot(rotation_matrix_x,
+                                                                                       [xp, yp,
+                                                                                        0, 1])))
+        if self.clip_point(normalized_point[0], normalized_point[1]):
+            x, y = self.transform_to_viewport(normalized_point[0], normalized_point[1])
+            return x, y
+        else:
+            return None
+
+    def project_perspective_polygon(self, cop, obj, rotation_matrix_x, rotation_matrix_y, translation_matrix):
         # 4. Projete, calculando xp e yp
         projected_points = []
         for segment in obj.segments:
-            for point in segment: # Apply transformations
+            for point in segment:  # Apply transformations
                 px, py, pz = point.coordinate_x_scn, point.coordinate_y_scn, point.coordinate_z_scn
                 d = pz - cop[2]
-                transform_matrix = np.array([[1, 0, 0, 0],[0, 1, 0, 0],[0, 0, 0, 0],[0, 0, (1/d), 1]])
+                transform_matrix = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, (1 / d), 0]])
                 transformed_point = np.dot(transform_matrix, [px, py, pz, 1])
                 xp = transformed_point[0] / transformed_point[3]  # Calculate xp
                 yp = transformed_point[1] / transformed_point[3]  # Calculate yp
                 projected_points.append((xp, yp, 0))
-
         # 5. Normalize xp e yp (coordenadas de window)
         normalized_points = []
         for point in projected_points:
             # Normalize points
-            transformed_point = np.dot(translation_matrix, np.dot(rotation_matrix_y, np.dot(rotation_matrix_x, [point[0], point[1], point[2], 1])))
+            normalized_point = np.dot(translation_matrix, np.dot(rotation_matrix_y, np.dot(rotation_matrix_x,
+                                                                                            [point[0], point[1],
+                                                                                             point[2], 1])))
             # x_normalized = ...
             # y_normalized = ...
-            normalized_points.append((transformed_point[0], transformed_point[1]))
-
+            normalized_points.append((normalized_point[0], normalized_point[1]))
         # 6. Clippe 2D
         clipped_points = self.clip_polygon(normalized_points)
-
         # 7. Transforme para coordenadas de Viewport
         if clipped_points:
             viewport_points = []
