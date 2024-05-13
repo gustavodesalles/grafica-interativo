@@ -869,7 +869,7 @@ class GraphicsSystem3D:
 
         vrp = (0,0,0)
         vpn = (0,0,0)
-        cop = (0,0,1)
+        cop = (0,0,5)
 
         for obj in self.display_file.objects.values():
             self.draw_object_3d(obj, vrp, vpn, cop)

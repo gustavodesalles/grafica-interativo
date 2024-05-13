@@ -12,8 +12,16 @@ display_file = DisplayFile3D()
 display_file.add_point((50, 50, 50), color='red')
 #display_file.add_line([(-50, -50, -50), (50, 50, 50)], color='red')
 # coordinates = [(0, 0, 0), (100, 0, 0), (100, 100, 0), (0, 100, 0), (0, 0, 100), (100, 0, 100), (100, 100, 100), (0, 100, 100)]
-# display_file.add_polygon(coordinates, color='blue')
 
+coordinates2 = [
+    (45, 45, 50), (255, 45, 50), (255, 255, 50),
+    (45, 255, 50), (45, 45, 50), (45, 45, 710),
+    (255, 45, 710), (255, 45, 50), (255, 45, 710),
+    (255, 255, 710), (255, 255, 50), (255, 255, 710),
+    (45, 255, 710), (45, 255, 50), (45, 255, 710), (45, 45, 710)
+]
+display_file.add_polygon(coordinates2, color='blue')
+# display_file.add_polygon(coordinates, color='blue')
 
 object_list = tk.Listbox(root)
 graphics_system = GraphicsSystem3D(root, display_file, object_list)
