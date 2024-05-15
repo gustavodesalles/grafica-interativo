@@ -768,13 +768,25 @@ class GraphicsSystem3D:
         # Draw the polygon
         self.canvas.create_polygon(coordinates, outline=color, fill='')
 
+    def draw_bezier_surface(self, control_points, color):
+        num_points = len(control_points)
+        mb = np.array([[-1, 3, -3, 1],
+                        [3, -6, 3, 0],
+                        [-3, 3, 0, 0],
+                        [1, 0, 0, 0]])
+
+        for i in range(num_points - 15):
+            for t in np.arange(0, 1, 0.01):
+                #TODO: definir matrizes gx e gy e desenhar curvas da superfície
+                g = np.array([control_points[x:x+4] for x in range(0, len(control_points), 4)]) # não tenho certeza
+
     def draw_wireframe(self, coordinates, color, filled):
         # Desenhar as linhas do polígono
         # Desenhar as linhas entre os vértices do modelo
         for i in range(len(coordinates)):
             x1, y1, z1 = coordinates[i]
             x2, y2, z2 = coordinates[(i + 1) % len(coordinates)]
-            
+
             # Desenhar linha entre os vértices nos planos x-y, x-z e y-z
             self.canvas.create_line(x1, y1, x2, y2, fill=color)  # Linha no plano x-y
             self.canvas.create_line(x1, z1, x2, z2, fill=color)  # Linha no plano x-z
