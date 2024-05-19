@@ -9,10 +9,8 @@ root.geometry("1200x1000")
 
 display_file = DisplayFile3D()
 # Exemplo de adicionar objetos
-display_file.add_point((50, 50, 50), color='red')
-#display_file.add_line([(-50, -50, -50), (50, 50, 50)], color='red')
-# coordinates = [(0, 0, 0), (100, 0, 0), (100, 100, 0), (0, 100, 0), (0, 0, 100), (100, 0, 100), (100, 100, 100), (0, 100, 100)]
 
+coordinates1 = (50, 50, 50)
 coordinates2 = [
     (45, 45, 50), (255, 45, 50), (255, 255, 50),
     (45, 255, 50), (45, 45, 50), (45, 45, 710),
@@ -20,8 +18,18 @@ coordinates2 = [
     (255, 255, 710), (255, 255, 50), (255, 255, 710),
     (45, 255, 710), (45, 255, 50), (45, 255, 710), (45, 45, 710)
 ]
+
+coordinates3 = [
+    (45, 45, 50), (255, 45, 50), (255, 255, 50),
+    (45, 255, 50), (45, 45, 50), (45, 45, 710),
+    (255, 45, 710), (255, 45, 50), (255, 45, 710),
+    (255, 255, 710), (255, 255, 50), (255, 255, 710),
+    (45, 255, 710), (45, 255, 50), (45, 255, 710), (45, 45, 710)
+]
+
+display_file.add_point(coordinates1, color='red')
 display_file.add_polygon(coordinates2, color='blue')
-# display_file.add_polygon(coordinates, color='blue')
+#display_file.add_bezier_surface(coordinates3, color='blue')
 
 object_list = tk.Listbox(root)
 graphics_system = GraphicsSystem3D(root, display_file, object_list)

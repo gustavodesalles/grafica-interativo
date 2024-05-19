@@ -73,7 +73,6 @@ class DisplayFile3D:
             self.counters['bezier-surface'] += 1
         except ValueError:
             print("Invalid coordinates")
-           
 
     def remove_object(self, name):
         if name in self.objects:

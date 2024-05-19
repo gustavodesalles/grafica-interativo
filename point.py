@@ -1,5 +1,5 @@
 from object import Object
-
+import numpy as np
 
 class Point(Object):
     def __init__(self, coordinate_x, coordinate_y, name, color):
@@ -19,3 +19,6 @@ class Point3D(Object):
         self.coordinate_x_scn = coordinate_x
         self.coordinate_y_scn = coordinate_y
         self.coordinate_z_scn = coordinate_z
+
+    def to_array(self):
+        return np.array([self.coordinate_x, self.coordinate_y, self.coordinate_z])

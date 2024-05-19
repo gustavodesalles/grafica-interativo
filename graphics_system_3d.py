@@ -162,11 +162,9 @@ class GraphicsSystem3D:
         add_object_frame = tk.Frame(parent_frame, bg=self.frame_color)
         add_object_frame.grid(row=row, column=column, padx=5, pady=5)
 
-        # Add your interface elements for adding objects here
-        # Example: entry for object type, entry for coordinates, color selection, etc.
         self.object_type = tk.StringVar()
         self.object_types_combobox = ttk.Combobox(add_object_frame, state="readonly", textvariable=self.object_type,
-                                                  values=['Point', 'Polygon'])
+                                                values=['Point', 'Polygon', 'Bicubic Bezier Surface'])
         self.object_types_combobox.current(0)
         self.object_types_combobox.pack(pady=10)
 
@@ -175,6 +173,11 @@ class GraphicsSystem3D:
 
         self.entry_coordinates = tk.Entry(add_object_frame)
         self.entry_coordinates.pack()
+
+        self.label_control_points = tk.Label(add_object_frame, text="Control Points (for Bicubic Bezier Surface):")
+        self.label_control_points.pack(side=tk.TOP)
+        self.entry_control_points = tk.Entry(add_object_frame)
+        self.entry_control_points.pack()
 
         self.color_string = tk.StringVar()
         self.c1 = tk.Radiobutton(add_object_frame, text="Red", value="red", variable=self.color_string)
@@ -190,6 +193,8 @@ class GraphicsSystem3D:
 
         self.button_add_object = tk.Button(add_object_frame, text="Add Object", command=self.add_object, bg=self.button_color)
         self.button_add_object.pack(side=tk.TOP)
+
+
 
     def setup_remove_object_interface(self, parent_frame, row, column):
         remove_object_frame = tk.Frame(parent_frame, bg=self.frame_color)
@@ -758,27 +763,79 @@ class GraphicsSystem3D:
             transformed_coords = self.orthogonal_projection(obj, vrp, vpn)
         elif self.projection_type == 'perspective':
             transformed_coords = self.perspective_projection(obj, cop, vpn)
+
         if transformed_coords is not None:
             if obj.type == 'Point':
                 self.canvas.create_oval(transformed_coords[0], transformed_coords[1], transformed_coords[0] + 2, transformed_coords[1] + 2, fill=obj.color)
             elif obj.type == 'Polygon':
                 self.draw_polygon(transformed_coords, obj.color)
+            elif obj.type == "Bezier Surface":
+                self.draw_bezier_surface(transformed_coords, obj.color)
 
     def draw_polygon(self, coordinates, color):
         # Draw the polygon
         self.canvas.create_polygon(coordinates, outline=color, fill='')
 
-    def draw_bezier_surface(self, control_points, color):
-        num_points = len(control_points)
-        mb = np.array([[-1, 3, -3, 1],
-                        [3, -6, 3, 0],
-                        [-3, 3, 0, 0],
-                        [1, 0, 0, 0]])
+    # def draw_bezier_surface(self, control_points, color):
+    #     num_points = len(control_points)
+    #     mb = np.array([[-1, 3, -3, 1],
+    #                     [3, -6, 3, 0],
+    #                     [-3, 3, 0, 0],
+    #                     [1, 0, 0, 0]])
 
-        for i in range(num_points - 15):
-            for t in np.arange(0, 1, 0.01):
-                #TODO: definir matrizes gx e gy e desenhar curvas da superfície
-                g = np.array([control_points[x:x+4] for x in range(0, len(control_points), 4)]) # não tenho certeza
+    #     for i in range(num_points - 15):
+    #         for t in np.arange(0, 1, 0.01):
+    #             #TODO: definir matrizes gx e gy e desenhar curvas da superfície
+    #             g = np.array([control_points[x:x+4] for x in range(0, len(control_points), 4)]) # não tenho certeza
+
+    def draw_bezier_surface(self, control_points, color):
+        control_points = np.array(control_points).reshape(4, 4, 3)  # Garantir que está no formato correto
+        u_values = np.linspace(0, 1, 20)
+        v_values = np.linspace(0, 1, 20)
+        surface_points = self.bezier_surface(control_points, u_values, v_values)
+
+        for i in range(surface_points.shape[0] - 1):
+            for j in range(surface_points.shape[1] - 1):
+                # Desenhar linhas da superfície
+                self.canvas.create_line(surface_points[i, j, 0], surface_points[i, j, 1],
+                                        surface_points[i + 1, j, 0], surface_points[i + 1, j, 1], fill=color)
+                self.canvas.create_line(surface_points[i, j, 0], surface_points[i, j, 1],
+                                        surface_points[i, j + 1, 0], surface_points[i, j + 1, 1], fill=color)
+
+
+
+    
+    # Função de cálculo de ponto na superfície de Bézier
+    def bezier_surface_point(self, u, v, gx, gy, gz, mb):
+        u_vec = np.array([u**3, u**2, u, 1])
+        v_vec = np.array([v**3, v**2, v, 1])
+        
+        x = u_vec @ mb @ gx @ mb.T @ v_vec.T
+        y = u_vec @ mb @ gy @ mb.T @ v_vec.T
+        z = u_vec @ mb @ gz @ mb.T @ v_vec.T
+        
+        return x, y, z
+
+    def convert_3d_to_2d(self, x, y, z):
+        # Aqui você deve implementar a lógica para converter coordenadas 3D para 2D,
+        # baseada no tipo de projeção (perspectiva ou ortográfica) que você está usando.
+        # Esta é uma implementação de exemplo para uma projeção perspectiva simples:
+        d = 500  # Distância do plano de projeção (pode ajustar conforme necessário)
+        screen_x = x * d / (d + z)
+        screen_y = y * d / (d + z)
+        return screen_x, screen_y
+
+    def parse_control_points(self, control_points_str):
+        rows = control_points_str.split(';')
+        control_points = []
+        for row in rows:
+            points = row.split(',')
+            parsed_points = []
+            for point in points:
+                x, y, z = map(float, point.strip('()').split(','))
+                parsed_points.append((x, y, z))
+            control_points.append(parsed_points)
+        return control_points
 
     def draw_wireframe(self, coordinates, color, filled):
         # Desenhar as linhas do polígono
@@ -907,6 +964,10 @@ class GraphicsSystem3D:
             return self.project_orthogonal_polygon(obj, rotation_matrix_x, rotation_matrix_y, translation_matrix)
         elif obj.type == 'Point':
             return self.project_orthogonal_point(obj, rotation_matrix_x, rotation_matrix_y, translation_matrix)
+        elif obj.type == 'Bezier Surface':
+            return self.project_orthogonal_bezier_surface(obj, rotation_matrix_x, rotation_matrix_y, translation_matrix)
+
+
 
     def project_orthogonal_point(self, obj, rotation_matrix_x, rotation_matrix_y, translation_matrix):
         # Ignore a coordenada Z
@@ -949,6 +1010,49 @@ class GraphicsSystem3D:
             return viewport_points
         else:
             return None  # Retorna None se o polígono estiver completamente fora da janela de visualização
+
+    def project_orthogonal_bezier_surface(self, obj, rotation_matrix_x, rotation_matrix_y, translation_matrix):
+        control_points = np.array([point.to_array() for point in obj.coordinates])
+        transformed_points = []
+
+        for point in control_points:
+            # Verifique se point tem pelo menos três componentes, adicionando 0 para z se necessário
+            if len(point) == 2:
+                point = np.append(point, 0)
+            point_h = np.append(point, 1)  # Coordenadas homogêneas
+            transformed_point = translation_matrix @ point_h
+            transformed_point = rotation_matrix_x @ transformed_point
+            transformed_point = rotation_matrix_y @ transformed_point
+            transformed_points.append(transformed_point[:3])  # Mantém x, y, z para cálculos de Bézier
+
+        transformed_points = np.array(transformed_points).reshape(4, 4, 3)
+        return transformed_points
+
+
+    def bezier_surface(self, control_points, u_values, v_values):
+        m, n, _ = control_points.shape
+        num_u = len(u_values)
+        num_v = len(v_values)
+        surface_points = np.zeros((num_u, num_v, 2))
+
+        for i, u in enumerate(u_values):
+            for j, v in enumerate(v_values):
+                Bu = self.bernstein_basis(m - 1, u)
+                Bv = self.bernstein_basis(n - 1, v)
+                point = np.zeros(3)
+                for k in range(m):
+                    for l in range(n):
+                        point += control_points[k, l] * Bu[k] * Bv[l]
+                surface_points[i, j] = point[:2]  # Mantém apenas x, y para desenhar
+
+        return surface_points
+
+
+    def bernstein_basis(self, n, t):
+        basis = np.zeros(n + 1)
+        for i in range(n + 1):
+            basis[i] = np.math.comb(n, i) * (t ** i) * ((1 - t) ** (n - i))
+        return basis
 
     def perspective_projection(self, obj, cop, vpn):
         # 1. Translade COP para a origem
@@ -1089,6 +1193,9 @@ class GraphicsSystem3D:
                 self.display_file.add_b_spline([(coordinates[i], coordinates[i + 1], coordinates[i + 2]) for i in range(0, len(coordinates), 3)], object_color)
             elif coordinates_head.upper() == "POLYGON":
                 self.display_file.add_polygon([(coordinates[i], coordinates[i + 1], coordinates[i + 2]) for i in range(0, len(coordinates), 3)], object_color)
+            elif coordinates_head.upper() == "BEZIER SURFACE":
+                control_points = self.entry_control_points.get()
+                self.display_file.add_bezier_surface(control_points, object_color)
             else:
                 print("Unable to add object")
             self.draw_display_file()
@@ -1096,7 +1203,6 @@ class GraphicsSystem3D:
             print("Insufficient coordinates")
         except ValueError:
             print("Invalid coordinates")
-
 
 
     def remove_object(self):
