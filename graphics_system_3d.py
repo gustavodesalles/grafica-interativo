@@ -713,7 +713,7 @@ class GraphicsSystem3D:
                 point_scn = obj.point_list_scn[i]
                 point_vector_scn = np.dot(transformation_matrix, np.array([point_scn[0], point_scn[1], 1]))
                 obj.point_list_scn[i] = (point_vector_scn[0], point_vector_scn[1])
-        elif obj.type == 'Polygon':
+        elif obj.type == 'Polygon' or obj.type == 'Bezier Surface':
             for i in range(len(obj.coordinates)):
                 vertex = obj.coordinates[i]
                 vertex_vector = np.dot(transformation_matrix, np.array([vertex.coordinate_x, vertex.coordinate_y, vertex.coordinate_z, 1]))
@@ -776,18 +776,6 @@ class GraphicsSystem3D:
         # Draw the polygon
         self.canvas.create_polygon(coordinates, outline=color, fill='')
 
-    # def draw_bezier_surface(self, control_points, color):
-    #     num_points = len(control_points)
-    #     mb = np.array([[-1, 3, -3, 1],
-    #                     [3, -6, 3, 0],
-    #                     [-3, 3, 0, 0],
-    #                     [1, 0, 0, 0]])
-
-    #     for i in range(num_points - 15):
-    #         for t in np.arange(0, 1, 0.01):
-    #             #TODO: definir matrizes gx e gy e desenhar curvas da superfície
-    #             g = np.array([control_points[x:x+4] for x in range(0, len(control_points), 4)]) # não tenho certeza
-
     def draw_bezier_surface(self, control_points, color):
         control_points = np.array(control_points).reshape(4, 4, 3)  # Garantir que está no formato correto
         u_values = np.linspace(0, 1, 20)
@@ -796,14 +784,14 @@ class GraphicsSystem3D:
 
         for i in range(surface_points.shape[0] - 1):
             for j in range(surface_points.shape[1] - 1):
+                #TODO: clipping das linhas
                 # Desenhar linhas da superfície
-                self.canvas.create_line(surface_points[i, j, 0], surface_points[i, j, 1],
-                                        surface_points[i + 1, j, 0], surface_points[i + 1, j, 1], fill=color)
-                self.canvas.create_line(surface_points[i, j, 0], surface_points[i, j, 1],
-                                        surface_points[i, j + 1, 0], surface_points[i, j + 1, 1], fill=color)
-
-
-
+                l1x1, l1y1, l1x2, l1y2 = self.clip_parametric(surface_points[i, j, 0], surface_points[i, j, 1], surface_points[i + 1, j, 0], surface_points[i + 1, j, 1])
+                l2x1, l2y1, l2x2, l2y2 = self.clip_parametric(surface_points[i, j, 0], surface_points[i, j, 1], surface_points[i, j + 1, 0], surface_points[i, j + 1, 1])
+                if l1x1 is not None:
+                    self.canvas.create_line(l1x1, l1y1, l1x2, l1y2, fill=color)
+                if l2x1 is not None:
+                    self.canvas.create_line(l2x1, l2y1, l2x2, l2y2, fill=color)
     
     # Função de cálculo de ponto na superfície de Bézier
     def bezier_surface_point(self, u, v, gx, gy, gz, mb):
@@ -967,8 +955,6 @@ class GraphicsSystem3D:
         elif obj.type == 'Bezier Surface':
             return self.project_orthogonal_bezier_surface(obj, rotation_matrix_x, rotation_matrix_y, translation_matrix)
 
-
-
     def project_orthogonal_point(self, obj, rotation_matrix_x, rotation_matrix_y, translation_matrix):
         # Ignore a coordenada Z
         px, py, pz = obj.coordinate_x_scn, obj.coordinate_y_scn, obj.coordinate_z_scn
@@ -1012,7 +998,7 @@ class GraphicsSystem3D:
             return None  # Retorna None se o polígono estiver completamente fora da janela de visualização
 
     def project_orthogonal_bezier_surface(self, obj, rotation_matrix_x, rotation_matrix_y, translation_matrix):
-        control_points = np.array([point.to_array() for point in obj.coordinates])
+        control_points = np.array([[point.coordinate_x_scn, point.coordinate_y_scn, point.coordinate_z_scn] for point in obj.coordinates])
         transformed_points = []
 
         for point in control_points:
@@ -1028,7 +1014,6 @@ class GraphicsSystem3D:
         transformed_points = np.array(transformed_points).reshape(4, 4, 3)
         return transformed_points
 
-
     def bezier_surface(self, control_points, u_values, v_values):
         m, n, _ = control_points.shape
         num_u = len(u_values)
@@ -1043,10 +1028,10 @@ class GraphicsSystem3D:
                 for k in range(m):
                     for l in range(n):
                         point += control_points[k, l] * Bu[k] * Bv[l]
-                surface_points[i, j] = point[:2]  # Mantém apenas x, y para desenhar
+                # surface_points[i, j] = point[:2]  # Mantém apenas x, y para desenhar
+                surface_points[i, j] = self.transform_to_viewport(point[0], point[1])
 
         return surface_points
-
 
     def bernstein_basis(self, n, t):
         basis = np.zeros(n + 1)
@@ -1223,7 +1208,7 @@ class GraphicsSystem3D:
             center_y = sum([p[1] for p in obj.point_list]) / len(obj.point_list)
             center_z = sum([p[2] for p in obj.point_list]) / len(obj.point_list)
             return center_x, center_y, center_z
-        elif obj.type == "Polygon":
+        elif obj.type in ["Polygon", "Bezier Surface"]:
             center_x = sum([p.coordinate_x for p in obj.coordinates]) / len(obj.coordinates)
             center_y = sum([p.coordinate_y for p in obj.coordinates]) / len(obj.coordinates)
             center_z = sum([p.coordinate_z for p in obj.coordinates]) / len(obj.coordinates)

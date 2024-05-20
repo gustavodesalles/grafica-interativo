@@ -27,9 +27,9 @@ coordinates3 = [
     (45, 255, 710), (45, 255, 50), (45, 255, 710), (45, 45, 710)
 ]
 
-display_file.add_point(coordinates1, color='red')
+# display_file.add_point(coordinates1, color='red')
 display_file.add_polygon(coordinates2, color='blue')
-#display_file.add_bezier_surface(coordinates3, color='blue')
+display_file.add_bezier_surface(coordinates3, color='blue')
 
 object_list = tk.Listbox(root)
 graphics_system = GraphicsSystem3D(root, display_file, object_list)
