@@ -1055,6 +1055,8 @@ class GraphicsSystem3D:
             return self.project_perspective_polygon(cop, obj, rotation_matrix_x, rotation_matrix_y, translation_matrix)
         elif obj.type == 'Point':
             return self.project_perspective_point(cop, obj, rotation_matrix_x, rotation_matrix_y, translation_matrix)
+        elif obj.type == 'Bezier Surface':
+            return self.project_perspective_surface(cop, obj, rotation_matrix_x, rotation_matrix_y, translation_matrix)
 
     def project_perspective_point(self, cop, obj, rotation_matrix_x, rotation_matrix_y, translation_matrix):
         px, py, pz = obj.coordinate_x_scn, obj.coordinate_y_scn, obj.coordinate_z_scn
@@ -1106,6 +1108,27 @@ class GraphicsSystem3D:
             return viewport_points
         else:
             return None
+
+    def project_perspective_surface(self, cop, obj, rotation_matrix_x, rotation_matrix_y, translation_matrix):
+        projected_points = []
+        for point in obj.coordinates:
+            px, py, pz = point.coordinate_x_scn, point.coordinate_y_scn, point.coordinate_z_scn
+            d = pz - cop[2]
+            transform_matrix = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, (1 / d), 0]])
+            transformed_point = np.dot(transform_matrix, [px, py, pz, 1])
+            xp = transformed_point[0] / transformed_point[3]  # Calculate xp
+            yp = transformed_point[1] / transformed_point[3]  # Calculate yp
+            projected_points.append((xp, yp, 0))
+
+        normalized_points = []
+        for point in projected_points:
+            normalized_point = np.dot(translation_matrix, np.dot(rotation_matrix_y, np.dot(rotation_matrix_x,
+                                                                                           [point[0], point[1],
+                                                                                            point[2], 1])))
+            normalized_points.append((normalized_point[0], normalized_point[1], normalized_point[2]))
+
+        normalized_points = np.asarray(normalized_points).reshape(4, 4, 3)
+        return normalized_points
 
     ################################################################################
 ############################### BASIC OPERATIONS ###############################
