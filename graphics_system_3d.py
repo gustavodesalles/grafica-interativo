@@ -550,7 +550,7 @@ class GraphicsSystem3D:
                 type_index = self.get_index_with_substring(lines, '# Type:')
                 if type_index != -1:
                     type = lines[type_index].split(":")[1].strip()
-                    if type not in ["Point", "Polygon"]:
+                    if type not in ["Point", "Polygon", "Bezier Surface"]:
                         print(f"Arquivo {file_path} possui tipo inválido.")
                         return
                 else:
@@ -577,14 +577,10 @@ class GraphicsSystem3D:
 
                 if type.upper() == 'POINT':
                     self.display_file.add_point(vertices[0], color)
-                # elif type.upper() == 'LINE':
-                #     self.display_file.add_line(vertices, color)
-                # elif type.upper() == 'WIREFRAME':
-                #     self.display_file.add_wireframe(vertices, color, filled)
                 elif type.upper() == 'POLYGON':
                     self.display_file.add_polygon(vertices, color, segments)
-                # elif type.upper() == 'CURVE':
-                #     self.display_file.add_curve(vertices, color)
+                elif type.upper() == 'BEZIER SURFACE':
+                    self.display_file.add_bezier_surface(vertices, color)
                 # elif type.upper() == 'B-SPLINE':
                 #     self.display_file.add_b_spline(vertices, color)
                 self.draw_display_file()
@@ -606,24 +602,22 @@ class GraphicsSystem3D:
         if obj_name in self.display_file.objects:
             obj = self.display_file.objects[obj_name]
 
-            if obj.type == 'Polygon':
-                file_path = f"{obj_name}.obj"
-                with open(file_path, 'w') as f:
-                    f.write("# Type: Polygon\n")
-                    f.write(f"# Color: {obj.color}\n")
-                    # Escreve os vértices
-                    for coordinate in obj.coordinates:
-                        f.write("v {} {} {}\n".format(coordinate.coordinate_x, coordinate.coordinate_y, coordinate.coordinate_z))
+            file_path = f"{obj_name}.obj"
+            with open(file_path, 'w') as f:
+                f.write(f"# Type: {obj.type}\n")
+                f.write(f"# Color: {obj.color}\n")
+                # Escreve os vértices
+                for coordinate in obj.coordinates:
+                    f.write("v {} {} {}\n".format(coordinate.coordinate_x, coordinate.coordinate_y, coordinate.coordinate_z))
 
+                if obj.type == "Polygon":
                     # Escreve as faces
                     for i in obj.segments:
                         # Escreve a linha de face no arquivo .obj
                         f.write("l {} {}\n".format(obj.coordinates.index(i[0]) + 1,
                                                          obj.coordinates.index(i[1]) + 1))
 
-                print(f"Objeto '{obj_name}' exportado para '{file_path}'.")
-            else:
-                print("Apenas objetos do tipo Polygon3D podem ser exportados.")
+            print(f"Objeto '{obj_name}' exportado para '{file_path}'.")
         else:
             print(f"O objeto '{obj_name}' não existe na lista de objetos.")
 
@@ -926,7 +920,7 @@ class GraphicsSystem3D:
 
         vrp = (0,0,0)
         vpn = (0,0,0)
-        cop = (0,0,5)
+        cop = (0,0,1)
 
         for obj in self.display_file.objects.values():
             self.draw_object_3d(obj, vrp, vpn, cop)
