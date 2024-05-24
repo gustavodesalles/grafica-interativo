@@ -164,7 +164,7 @@ class GraphicsSystem3D:
 
         self.object_type = tk.StringVar()
         self.object_types_combobox = ttk.Combobox(add_object_frame, state="readonly", textvariable=self.object_type,
-                                                values=['Point', 'Polygon', 'Bicubic Bezier Surface'])
+                                                values=['Point', 'Polygon', 'Bezier Surface', 'B-spline Surface'])
         self.object_types_combobox.current(0)
         self.object_types_combobox.pack(pady=10)
 
@@ -174,7 +174,7 @@ class GraphicsSystem3D:
         self.entry_coordinates = tk.Entry(add_object_frame)
         self.entry_coordinates.pack()
 
-        self.label_control_points = tk.Label(add_object_frame, text="Control Points (for Bicubic Bezier Surface):")
+        self.label_control_points = tk.Label(add_object_frame, text="Control Points (for Surfaces):")
         self.label_control_points.pack(side=tk.TOP)
         self.entry_control_points = tk.Entry(add_object_frame)
         self.entry_control_points.pack()
@@ -193,8 +193,6 @@ class GraphicsSystem3D:
 
         self.button_add_object = tk.Button(add_object_frame, text="Add Object", command=self.add_object, bg=self.button_color)
         self.button_add_object.pack(side=tk.TOP)
-
-
 
     def setup_remove_object_interface(self, parent_frame, row, column):
         remove_object_frame = tk.Frame(parent_frame, bg=self.frame_color)
@@ -771,10 +769,77 @@ class GraphicsSystem3D:
                 self.draw_polygon(transformed_coords, obj.color)
             elif obj.type == "Bezier Surface":
                 self.draw_bezier_surface(transformed_coords, obj.color)
+            elif obj.type == "B-Spline Surface":
+                self.draw_bicubic_bspline_surface(transformed_coords, obj.color)
 
     def draw_polygon(self, coordinates, color):
         # Draw the polygon
         self.canvas.create_polygon(coordinates, outline=color, fill='')
+
+    def draw_bicubic_bspline_surface(self, control_points, color):
+        control_points = np.array(control_points).reshape((-1, 4, 3))
+        num_patches_u = control_points.shape[0] - 3
+        num_patches_v = control_points.shape[1] - 3
+
+        for i in range(num_patches_u):
+            for j in range(num_patches_v):
+                patch = control_points[i:i+4, j:j+4]
+                self.draw_patch(patch, color)
+
+    def draw_patch(self, patch, color):
+        Eds = np.array([
+            [1, 0, 0, 0],
+            [1, 1, 0, 0],
+            [1, 2, 1, 0],
+            [1, 3, 3, 1]
+        ])
+        Edt = Eds.T
+
+        Cx = patch[:, :, 0]
+        Cy = patch[:, :, 1]
+        Cz = patch[:, :, 2]
+
+        DDx = Eds @ Cx @ Edt.T
+        DDy = Eds @ Cy @ Edt.T
+        DDz = Eds @ Cz @ Edt.T
+
+        ns, nt = 10, 10  # Number of subdivisions
+
+        for i in range(ns):
+            self.draw_curve_fwd_diff(nt, DDx[i, :], DDy[i, :], DDz[i, :])
+            if i < ns - 1:
+                DDx[i + 1, :] += DDx[i, :]
+                DDy[i + 1, :] += DDy[i, :]
+                DDz[i + 1, :] += DDz[i, :]
+
+        DDx, DDy, DDz = Eds @ Cx.T @ Edt.T, Eds @ Cy.T @ Edt.T, Eds @ Cz.T @ Edt.T
+
+        for i in range(nt):
+            self.draw_curve_fwd_diff(ns, DDx[i, :], DDy[i, :], DDz[i, :], color)
+            if i < nt - 1:
+                DDx[i + 1, :] += DDx[i, :]
+                DDy[i + 1, :] += DDy[i, :]
+                DDz[i + 1, :] += DDz[i, :]
+
+    def draw_curve_fwd_diff(self, n, x, y, z, color):
+        points = []
+        for i in range(n):
+            points.append((x[0], y[0], z[0]))
+            x[0] += x[1]
+            x[1] += x[2]
+            x[2] += x[3]
+            y[0] += y[1]
+            y[1] += y[2]
+            y[2] += y[3]
+            z[0] += z[1]
+            z[1] += z[2]
+            z[2] += z[3]
+
+        for p1, p2 in zip(points[:-1], points[1:]):
+            transformed_p1x, transformed_p1y = self.transform_to_viewport(p1[0], p1[1])
+            transformed_p2x, transformed_p2y = self.transform_to_viewport(p2[0], p2[1])
+            self.canvas.create_line(transformed_p1x, transformed_p1y, transformed_p2x, transformed_p2y, fill=color)
+
 
     def draw_bezier_surface(self, control_points, color):
         control_points = np.array(control_points).reshape(4, 4, 3)  # Garantir que está no formato correto
@@ -1204,6 +1269,8 @@ class GraphicsSystem3D:
             elif coordinates_head.upper() == "BEZIER SURFACE":
                 control_points = self.entry_control_points.get()
                 self.display_file.add_bezier_surface(control_points, object_color)
+            elif coordinates_head.upper() == "B-SPLINE SURFACE":
+                self.display_file.add_b_spline_surface(control_points, object_color)
             else:
                 print("Unable to add object")
             self.draw_display_file()
