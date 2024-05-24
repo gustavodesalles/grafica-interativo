@@ -763,7 +763,7 @@ class GraphicsSystem3D:
                 self.draw_polygon(transformed_coords, obj.color)
             elif obj.type == "Bezier Surface":
                 self.draw_bezier_surface(transformed_coords, obj.color)
-            elif obj.type == "B-Spline Surface":
+            elif obj.type == "BSpline Surface":
                 self.draw_bicubic_bspline_surface(transformed_coords, obj.color)
 
     def draw_polygon(self, coordinates, color):
@@ -800,7 +800,7 @@ class GraphicsSystem3D:
         ns, nt = 10, 10  # Number of subdivisions
 
         for i in range(ns):
-            self.draw_curve_fwd_diff(nt, DDx[i, :], DDy[i, :], DDz[i, :])
+            self.draw_curve_fwd_diff(nt, DDx[i, :], DDy[i, :], DDz[i, :], color)
             if i < ns - 1:
                 DDx[i + 1, :] += DDx[i, :]
                 DDy[i + 1, :] += DDy[i, :]
@@ -834,6 +834,19 @@ class GraphicsSystem3D:
             transformed_p2x, transformed_p2y = self.transform_to_viewport(p2[0], p2[1])
             self.canvas.create_line(transformed_p1x, transformed_p1y, transformed_p2x, transformed_p2y, fill=color)
 
+    def update_fwd_diff_matrices(self, ddx, ddy, ddz):
+        # row1 = row1 + row2
+        ddx[0] = ddx[0] + ddx[1]
+        ddy[0] = ddy[0] + ddy[1]
+        ddz[0] = ddz[0] + ddz[1]
+        # row2 = row2 + row3
+        ddx[1] = ddx[1] + ddx[2]
+        ddy[1] = ddy[1] + ddy[2]
+        ddz[1] = ddz[1] + ddz[2]
+        # row3 = row3 + row4
+        ddx[2] = ddx[2] + ddx[3]
+        ddy[2] = ddy[2] + ddy[3]
+        ddz[2] = ddz[2] + ddz[3]
 
     def draw_bezier_surface(self, control_points, color):
         control_points = np.array(control_points).reshape(4, 4, 3)  # Garantir que está no formato correto
@@ -1011,7 +1024,7 @@ class GraphicsSystem3D:
             return self.project_orthogonal_polygon(obj, rotation_matrix_x, rotation_matrix_y, translation_matrix)
         elif obj.type == 'Point':
             return self.project_orthogonal_point(obj, rotation_matrix_x, rotation_matrix_y, translation_matrix)
-        elif obj.type == 'Bezier Surface':
+        elif obj.type in ['Bezier Surface', 'BSpline Surface']:
             return self.project_orthogonal_bezier_surface(obj, rotation_matrix_x, rotation_matrix_y, translation_matrix)
 
     def project_orthogonal_point(self, obj, rotation_matrix_x, rotation_matrix_y, translation_matrix):
@@ -1114,7 +1127,7 @@ class GraphicsSystem3D:
             return self.project_perspective_polygon(cop, obj, rotation_matrix_x, rotation_matrix_y, translation_matrix)
         elif obj.type == 'Point':
             return self.project_perspective_point(cop, obj, rotation_matrix_x, rotation_matrix_y, translation_matrix)
-        elif obj.type == 'Bezier Surface':
+        elif obj.type in ['Bezier Surface', 'BSpline Surface']:
             return self.project_perspective_surface(cop, obj, rotation_matrix_x, rotation_matrix_y, translation_matrix)
 
     def project_perspective_point(self, cop, obj, rotation_matrix_x, rotation_matrix_y, translation_matrix):
@@ -1264,7 +1277,7 @@ class GraphicsSystem3D:
                 control_points = self.entry_control_points.get()
                 self.display_file.add_bezier_surface(control_points, object_color)
             elif coordinates_head.upper() == "B-SPLINE SURFACE":
-                self.display_file.add_b_spline_surface(control_points, object_color)
+                self.display_file.add_b_spline_surface(coordinates, object_color)
             else:
                 print("Unable to add object")
             self.draw_display_file()
