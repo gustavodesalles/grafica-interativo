@@ -800,25 +800,20 @@ class GraphicsSystem3D:
         ns, nt = 10, 10  # Number of subdivisions
 
         for i in range(ns):
-            self.draw_curve_fwd_diff(nt, DDx[i, :], DDy[i, :], DDz[i, :], color)
-            if i < ns - 1:
-                DDx[i + 1, :] += DDx[i, :]
-                DDy[i + 1, :] += DDy[i, :]
-                DDz[i + 1, :] += DDz[i, :]
+            self.draw_curve_fwd_diff(nt, DDx[0], DDy[0], DDz[0], color)
+            self.update_fwd_diff_matrices(DDx, DDy, DDz)
 
         DDx, DDy, DDz = Eds @ Cx.T @ Edt.T, Eds @ Cy.T @ Edt.T, Eds @ Cz.T @ Edt.T
 
         for i in range(nt):
-            self.draw_curve_fwd_diff(ns, DDx[i, :], DDy[i, :], DDz[i, :], color)
-            if i < nt - 1:
-                DDx[i + 1, :] += DDx[i, :]
-                DDy[i + 1, :] += DDy[i, :]
-                DDz[i + 1, :] += DDz[i, :]
+            self.draw_curve_fwd_diff(ns, DDx[0], DDy[0], DDz[0], color)
+            self.update_fwd_diff_matrices(DDx, DDy, DDz)
 
     def draw_curve_fwd_diff(self, n, x, y, z, color):
-        points = []
+        # points = []
+        oldx = x[0]
+        oldy = y[0]
         for i in range(n):
-            points.append((x[0], y[0], z[0]))
             x[0] += x[1]
             x[1] += x[2]
             x[2] += x[3]
@@ -829,10 +824,11 @@ class GraphicsSystem3D:
             z[1] += z[2]
             z[2] += z[3]
 
-        for p1, p2 in zip(points[:-1], points[1:]):
-            transformed_p1x, transformed_p1y = self.transform_to_viewport(p1[0], p1[1])
-            transformed_p2x, transformed_p2y = self.transform_to_viewport(p2[0], p2[1])
+            transformed_p1x, transformed_p1y = self.transform_to_viewport(oldx, oldy)
+            transformed_p2x, transformed_p2y = self.transform_to_viewport(x[0], y[0])
             self.canvas.create_line(transformed_p1x, transformed_p1y, transformed_p2x, transformed_p2y, fill=color)
+            oldx = x[0]
+            oldy = y[0]
 
     def update_fwd_diff_matrices(self, ddx, ddy, ddz):
         # row1 = row1 + row2
