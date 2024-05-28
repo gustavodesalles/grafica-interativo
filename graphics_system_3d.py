@@ -548,7 +548,7 @@ class GraphicsSystem3D:
                 type_index = self.get_index_with_substring(lines, '# Type:')
                 if type_index != -1:
                     type = lines[type_index].split(":")[1].strip()
-                    if type not in ["Point", "Polygon", "Bezier Surface"]:
+                    if type not in ["Point", "Polygon", "Bezier Surface", "BSpline Surface"]:
                         print(f"Arquivo {file_path} possui tipo inválido.")
                         return
                 else:
@@ -774,19 +774,24 @@ class GraphicsSystem3D:
         control_points = np.array(control_points).reshape((-1, 4, 3))
         num_patches_u = control_points.shape[0] - 3
         num_patches_v = control_points.shape[1] - 3
+        b = np.array([[-1, 3, -3, 1],
+                      [3, -6, 3, 0],
+                      [-3, 3, 0, 0],
+                      [1, 0, 0, 0]])
 
         for i in range(num_patches_u):
             for j in range(num_patches_v):
-                patch = control_points[i:i+4, j:j+4]
+                patch = b @ control_points[i:i+4, j:j+4]
                 self.draw_patch(patch, color)
 
     def draw_patch(self, patch, color):
-        Eds = np.array([
-            [1, 0, 0, 0],
-            [1, 1, 0, 0],
-            [1, 2, 1, 0],
-            [1, 3, 3, 1]
-        ])
+        n_points = 16
+        delta = [1 / (n_points - 1), (1 / (n_points - 1)) ** 2, (1 / (n_points - 1)) ** 3]
+
+        Eds = np.array([[0, 0, 0, 1],
+                       [delta[2], delta[1], delta[0], 0],
+                       [6 * delta[2], 2 * delta[1], 0, 0],
+                       [6 * delta[2], 0, 0, 0]])
         Edt = Eds.T
 
         Cx = patch[:, :, 0]
@@ -831,18 +836,12 @@ class GraphicsSystem3D:
             oldy = y[0]
 
     def update_fwd_diff_matrices(self, ddx, ddy, ddz):
-        # row1 = row1 + row2
-        ddx[0] = ddx[0] + ddx[1]
-        ddy[0] = ddy[0] + ddy[1]
-        ddz[0] = ddz[0] + ddz[1]
-        # row2 = row2 + row3
-        ddx[1] = ddx[1] + ddx[2]
-        ddy[1] = ddy[1] + ddy[2]
-        ddz[1] = ddz[1] + ddz[2]
-        # row3 = row3 + row4
-        ddx[2] = ddx[2] + ddx[3]
-        ddy[2] = ddy[2] + ddy[3]
-        ddz[2] = ddz[2] + ddz[3]
+        for i in range(3):
+            for j in range(4):
+                ddx[i][j] += ddx[i + 1][j]
+                ddy[i][j] += ddy[i + 1][j]
+                ddz[i][j] += ddz[i + 1][j]
+        return ddx, ddy, ddz
 
     def draw_bezier_surface(self, control_points, color):
         control_points = np.array(control_points).reshape(4, 4, 3)  # Garantir que está no formato correto
@@ -1161,8 +1160,6 @@ class GraphicsSystem3D:
             normalized_point = np.dot(translation_matrix, np.dot(rotation_matrix_y, np.dot(rotation_matrix_x,
                                                                                             [point[0], point[1],
                                                                                              point[2], 1])))
-            # x_normalized = ...
-            # y_normalized = ...
             normalized_points.append((normalized_point[0], normalized_point[1]))
         # 6. Clippe 2D
         clipped_points = self.clip_polygon(normalized_points)
